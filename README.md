@@ -100,7 +100,7 @@ While this file is free to use:
 - If you feel like sending a small thank you tip you can do so here.
 - If you feel like sending a small thank you tip you can do so here.
 - https://streamelements.com/FluffFaceYeti/tip
-- 
+
 ----------------------------------------------------
 5. OnRender shuts down after 15 minutes of no activity?
 ----------------------------------------------------
