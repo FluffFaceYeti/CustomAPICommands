@@ -97,4 +97,15 @@ While this file is free to use:
 - If you feel like sending a small thank you tip you can do so here.
 - If you feel like sending a small thank you tip you can do so here.
 - https://streamelements.com/FluffFaceYeti/tip
-
+- 
+----------------------------------------------------
+5. OnRender shuts down after 15 minutes of no activity?
+----------------------------------------------------
+- The free version does that, But there is a way to trick it!
+- Create a StreamElements Timer 
+- Have the timer run ever 10 minutes when you are live 
+- have the response be $(urlfetch https://yourusername.onrender.com/ping)
+- So if your OnRender service is called waffles it would be $(urlfetch https://waffles.onrender.com/ping)
+- Set the chat lines to zero
+- StreamElements will now ping your service every 10 minutes. Stopping the service from shutting down while you are live. 
+----------------------------------------------------
