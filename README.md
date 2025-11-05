@@ -496,7 +496,8 @@ Throw Shoe:
 ${customapi.https://yourusername.onrender.com?sender=${sender}&type=throwshoe}
 
 MiniGames Example
-rps: (Rock Paper Scissors)
+(Rock Paper Scissors)
+rps: 
 ${customapi.https://yourusername.onrender.com?sender=${sender}&user=${user}&type=rps}
 
 PP Duel:
