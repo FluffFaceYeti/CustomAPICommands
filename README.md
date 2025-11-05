@@ -267,197 +267,197 @@ link examples
 📊 STATS
 
 Beard:
-https://yourusername.onrender.com?sender=${sender}&type=beard&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=beard}
 
 Hair:
-https://yourusername.onrender.com?sender=${sender}&type=hair&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=hair}
 
 PP (Penis Size):
-https://yourusername.onrender.com?sender=${sender}&type=pp&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=pp}
 
 Boob Size:
-https://yourusername.onrender.com?sender=${sender}&type=bb&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=bb}
 
 ❤️ LOVE
 
 Mila Loves You:
-https://yourusername.onrender.com?sender=${sender}&type=mila&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=mila}
 
 Ivy Loves You:
-https://yourusername.onrender.com?sender=${sender}&type=ivy&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=ivy}
 
 Theo Loves You:
-https://yourusername.onrender.com?sender=${sender}&type=theo&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=theo}
 
 💔 HATE
 
 Mila Hate:
-https://yourusername.onrender.com?sender=${sender}&type=milahate&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=milahate}
 
 Ivy Hate:
-https://yourusername.onrender.com?sender=${sender}&type=ivyhate&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=ivyhate}
 
 Theo Hate:
-https://yourusername.onrender.com?sender=${sender}&type=theohate&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=theohate}
 
 🧠 PERSONALITY
 
 Butt:
-https://yourusername.onrender.com?sender=${sender}&type=butt&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=butt}
 
 Daddy:
-https://yourusername.onrender.com?sender=${sender}&type=daddy&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=daddy}
 
 Fox:
-https://yourusername.onrender.com?sender=${sender}&type=fox&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=fox}
 
 Nerd:
-https://yourusername.onrender.com?sender=${sender}&type=nerd&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=nerd}
 
 Pirate:
-https://yourusername.onrender.com?sender=${sender}&type=pirate&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=pirate}
 
 Sword Lunge:
-https://yourusername.onrender.com?sender=${sender}&type=swordlunge&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=swordlunge}
 
 Flame:
-https://yourusername.onrender.com?sender=${sender}&type=flame&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=flame}
 
 Tinkabell:
-https://yourusername.onrender.com?sender=${sender}&type=tinkabell&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=tinkabell}
 
 Princess:
-https://yourusername.onrender.com?sender=${sender}&type=princess&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=princess}
 
 Good Girl:
-https://yourusername.onrender.com?sender=${sender}&type=goodgirl&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=goodgirl}
 
 🏋️ GYM STATS
 
 Lift:
-https://yourusername.onrender.com?sender=${sender}&type=lift&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=lift}
 
 Run:
-https://yourusername.onrender.com?sender=${sender}&type=run&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=run}
 
 Sprint:
-https://yourusername.onrender.com?sender=${sender}&type=sprint&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=sprint}
 
 Deadlift:
-https://yourusername.onrender.com?sender=${sender}&type=deadlift&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=deadlift}
 
 Curl:
-https://yourusername.onrender.com?sender=${sender}&type=curl&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=curl}
 
 Row:
-https://yourusername.onrender.com?sender=${sender}&type=row&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=row}
 
 Stretch:
-https://yourusername.onrender.com?sender=${sender}&type=stretch&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=stretch}
 
 🏦 HOLD
 
 Gold Pouch:
-https://yourusername.onrender.com?sender=${sender}&type=gold&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=gold}
 
 💪 ACTIONS
 
 Squeeze:
-https://yourusername.onrender.com?sender=${sender}&type=squeeze&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=squeeze}
 
 Push:
-https://yourusername.onrender.com?sender=${sender}&type=push&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=push}
 
 Jump:
-https://yourusername.onrender.com?sender=${sender}&type=jump&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=jump}
 
 Press:
-https://yourusername.onrender.com?sender=${sender}&type=press&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=press}
 
 Kick:
-https://yourusername.onrender.com?sender=${sender}&type=kick&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=kick}
 
 😃 EMOTIONS & FEELINGS
 
 Happiness:
-https://yourusername.onrender.com?sender=${sender}&type=happiness&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=happiness}
 
 Anger:
-https://yourusername.onrender.com?sender=${sender}&type=anger&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=anger}
 
 Calmness:
-https://yourusername.onrender.com?sender=${sender}&type=calmness&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=calmness}
 
 Joy:
-https://yourusername.onrender.com?sender=${sender}&type=joy&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=joy}
 
 Excitement:
-https://yourusername.onrender.com?sender=${sender}&type=excitement&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=excitement}
 
 Energy:
-https://yourusername.onrender.com?sender=${sender}&type=energy&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=energy}
 
 Sleep:
-https://yourusername.onrender.com?sender=${sender}&type=sleep&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=sleep}
 
 🎯 SKILLS
 
 Precision:
-https://yourusername.onrender.com?sender=${sender}&type=precision&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=precision}
 
 Accuracy:
-https://yourusername.onrender.com?sender=${sender}&type=accuracy&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=accuracy}
 
 Focus:
-https://yourusername.onrender.com?sender=${sender}&type=focus&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=focus}
 
 Flirting:
-https://yourusername.onrender.com?sender=${sender}&type=flirting&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=flirting}
 
 Luck:
-https://yourusername.onrender.com?sender=${sender}&type=luck&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=luck}
 
 DJ Skill:
-https://yourusername.onrender.com?sender=${sender}&type=dj&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=dj}
 
 🤝 INTERACTIONS
 
 Bonk:
-https://yourusername.onrender.com?sender=${sender}&type=bonk&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=bonk}
 
 Boop:
-https://yourusername.onrender.com?sender=${sender}&type=boop&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=boop}
 
 Flip Table:
-https://yourusername.onrender.com?sender=${sender}&type=fliptable&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=fliptable}
 
 High Five:
-https://yourusername.onrender.com?sender=${sender}&type=highfive&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=highfive}
 
 Hug:
-https://yourusername.onrender.com?sender=${sender}&type=hug&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=hug}
 
 Kiss:
-https://yourusername.onrender.com?sender=${sender}&type=kiss&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=kiss}
 
 Love:
-https://yourusername.onrender.com?sender=${sender}&type=love&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=love}
 
 Pat:
-https://yourusername.onrender.com?sender=${sender}&type=pat&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=pat}
 
 Slap:
-https://yourusername.onrender.com?sender=${sender}&type=slap&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=slap}
 
 Spank:
-https://yourusername.onrender.com?sender=${sender}&type=spank&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=spank}
 
 Throw Shoe:
-https://yourusername.onrender.com?sender=${sender}&type=throwshoe&jokes=true
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=throwshoe}
 
 MiniGames Example
-
-For targeted mini-games like poduel:
+rps: (Rock Paper Scissors)
+${customapi.https://yourusername.onrender.com?sender=${sender}&user=${user}&type=rps}
 
 PP Duel:
-https://yourusername.onrender.com?sender=${sender}&user=${user}&type=poduel
+${customapi.https://yourusername.onrender.com?sender=${sender}&user=${user}&type=poduel}
