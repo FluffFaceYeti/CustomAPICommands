@@ -1186,7 +1186,7 @@ lock[type] = false; // Always release lock
 // ===========================================
 
 app.get("/ping", (req, res) => {
-res.send("pong");
+res.send("");
 });
 
 // ===========================================
@@ -1195,5 +1195,6 @@ res.send("pong");
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Daily Stat API running on port ${port}`));
+
 
 
