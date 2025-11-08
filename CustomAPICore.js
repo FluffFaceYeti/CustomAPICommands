@@ -93,34 +93,62 @@ return arr[Math.floor(Math.random() * arr.length)];
 
 // Check if jokes are enabled (global or per-type)
 function isJokeEnabled(req, type) {
-const global = req.query.jokes;
-if (global === "false") return false;
-if (global === "true") return true;
+  const global = req.query.jokes;
+  if (global === "false") return false;
+  if (global === "true") return true;
 
-const specific = req.query[`joke_${type}`];
-if (specific === "false") return false;
-if (specific === "true") return true;
+  const specific = req.query[`joke_${type}`];
+  if (specific === "false") return false;
+  if (specific === "true") return true;
 
-return true; // default to enabled
+  return true; // default to enabled
 }
 
-// Get a joke string for a given category and value (scales automatically)
-function getJoke(req, type, value) {
+/**
+ * Universal joke getter
+ * @param {object} req - request object
+ * @param {string} type - joke type / command name
+ * @param {number} value - numeric value to scale joke
+ * @param {object} [cfg] - optional {min, max, levels} config for stats/interactions
+ * @param {number} [index] - optional index for list-type commands
+ */
+function getJoke(req, type, value, cfg = null, index = null) {
   if (!isJokeEnabled(req, type)) return "";
-  const cfg =
-    (stats && stats[type]) ||
-    (personality && personality[type]) ||
-    (piracy && piracy[type]) ||
-    null;
-  if (!cfg || !cfg.levels) return "";
 
-  const [lowThreshold, highThreshold] = cfg.levels;
-  let level = "high"; // default to high
-  if (value <= lowThreshold) level = "low";
-  else if (value <= highThreshold) level = "medium";
+  // If cfg is provided (stats or interactions)
+  if (cfg && typeof value === "number") {
+    const min = cfg.min ?? 0;
+    const max = cfg.max ?? 100;
+    const levels = cfg.levels ?? [30, 70];
 
-  if (!jokes[type] || !jokes[type][level]) return "";
-  return " " + pickRandom(jokes[type][level]);
+    // Normalize value to 0-100
+    const pct = ((value - min) / (max - min)) * 100;
+
+    let level;
+    if (pct <= levels[0]) level = "low";
+    else if (pct <= levels[1]) level = "medium";
+    else level = "high";
+
+    if (jokes[type] && jokes[type][level]) {
+      return " " + pickRandom(jokes[type][level]);
+    }
+
+    return "";
+  }
+
+  // If index is provided (list-type commands like animal/drink/colors)
+  if (index !== null) {
+    if (jokes[type] && jokes[type][index]) return " " + jokes[type][index];
+    return "";
+  }
+
+  // Fallback for numeric value without cfg (assume 0-100)
+  const level = value <= 30 ? "low" : value <= 70 ? "medium" : "high";
+  if (jokes[type] && jokes[type][level]) {
+    return " " + pickRandom(jokes[type][level]);
+  }
+
+  return "";
 }
 
 // Format a username: remove @ and lowercase for internal use
@@ -255,12 +283,21 @@ function highOrLow(sender, target) {
 // ===========================================
 
 const specialUsers = {
-  username1: {
-    hair: "@username, your hair is the longest ever!",
-  },
-  username2: {
-    pet1: "username2, pet2 loves your face!",
-  },
+username1: {
+beard: "@username1, your beard is majestic like a wizard!",
+hair: "@username1, LUL You have no hair silly",
+},
+username2: {
+theo: "@username2, Theo knows who his mama is and gives her all his love!",
+},
+};
+
+// ===========================================
+// 📊 Custom
+// ===========================================
+
+const custombutt = {
+  butt: { min: 0, max: 100, levels: [30, 70], label: "butt", unit: "%", unitSpace: false },
 };
 
 // ===========================================
@@ -268,48 +305,34 @@ const specialUsers = {
 // ===========================================
 
 const stats = {
-beard: { min: 1, max: 30, levels: [5, 15], unit: "cm", label: "beard", unitSpace: false },
-hair: { min: 10, max: 100, levels: [20, 60], unit: "cm", label: "hair", unitSpace: false },
-pp: { min: 4, max: 15, levels: [6, 10], unit: "inches", label: "pp", unitSpace: false },
-bb: {
-label: "boob size",
-type: "bra", // custom type flag for special generation
-bands: [30, 32, 34, 36, 38, 40, 42],
-cups: ["A", "B", "C", "D", "DD", "E", "F"],
-unitSpace: false
-},
-};                                 
+  beard: { min: 1, max: 30, levels: [10, 25], unit: "cm", label: "beard", unitSpace: false },
+  hair: { min: 10, max: 100, levels: [30, 70], unit: "cm", label: "hair", unitSpace: false },
+  pp: { min: 4, max: 15, levels: [6, 10], unit: "inches", label: "pp", unitSpace: false },
+  bb: { label: "boob size", type: "bra", bands: [30, 32, 34, 36, 38, 40, 42], cups: ["A", "B", "C", "D", "DD", "E", "F"], unitSpace: false },
+  daddy: { min: 0, max: 100, levels: [30, 70], label: "daddy level", unit: "%", unitSpace: false },
+  catmom: { min: 0, max: 100, levels: [30, 70], label: "Cat Mom level", unit: "%", unitSpace: false },
+  stinker: { min: 0, max: 100, levels: [30, 70], label: "Fart level", unit: "%", unitSpace: false },
+  fox: { min: 0, max: 100, levels: [30, 70], label: "fox level", unit: "%", unitSpace: false },
+  nerd: { min: 0, max: 100, levels: [30, 70], label: "nerd level", unit: "%", unitSpace: false },
+  tinkabell: { min: 0, max: 100, levels: [20, 60], label: "tinkabell level", unit: "%", unitSpace: false },
+  princess: { min: 0, max: 100, levels: [30, 70], label: "princess energy", unit: "%", unitSpace: false },
+  goodgirl: { min: 0, max: 100, levels: [30, 70], label: "good girl level", unit: "%", unitSpace: false },
+};
 
 // ===========================================
 // ❤️ LOVE
 // ===========================================
 
 const love = {
-pet1: { min: 0, max: 100, levels: [30, 70], label: "Pet1 loves you", unit: "%", unitSpace: false },
-pet2: { min: 0, max: 100, levels: [30, 70], label: "Pet2 loves you", unit: "%", unitSpace: false },
-person1: { min: 0, max: 100, levels: [30, 70], label: "Person1 loves you", unit: "%", unitSpace: false },
-person2: { min: 0, max: 100, levels: [30, 70], label: "Person2 loves you", unit: "%", unitSpace: false },
+  flame: { min: 0, max: 100, levels: [30, 70], label: "Flame loves you", unit: "%", unitSpace: false },
 };
-
-// ===========================================
-// NOTE: DO NOT HAVE DUPLICATED VALUES. 
-// Pet1 CAN NOT BE IN LOVE AND HATE 
-// SEPERATE AS FOLLOWS
-// pe1love AND pet1hate 
-// EXAMPLE COMMAND! 
-// !pet1love "Pet1 loves you 70% today!"
-// !pet1hate "Pet1 hates you 70% today!"
-// ===========================================
 
 // ===========================================
 // 💔 HATE
 // ===========================================
 
 const hate = {
-  pet1: { min: 0, max: 100, levels: [30, 70], label: "Pet1 hates you", unit: "%", unitSpace: false },
-  pet2: { min: 0, max: 100, levels: [30, 70], label: "Pet2 hates you", unit: "%", unitSpace: false },
-  person1: { min: 0, max: 100, levels: [30, 70], label: "Person1 hates you", unit: "%", unitSpace: false },
-  person2: { min: 0, max: 100, levels: [30, 70], label: "Person2 hates you", unit: "%", unitSpace: false },
+  flamehate: { min: 0, max: 100, levels: [30, 70], label: "Flame hates you", unit: "%", unitSpace: false },
 };
 
 // ===========================================
@@ -317,16 +340,27 @@ const hate = {
 // ===========================================
 
 const personality = {
-  butt: { min: 0, max: 100, levels: [30, 70], label: "butt fruitiness", unit: "%", unitSpace: false },
-  daddy: { min: 0, max: 100, levels: [30, 70], label: "daddy level", unit: "%", unitSpace: false },
-  fox: { min: 0, max: 100, levels: [30, 70], label: "fox level", unit: "%", unitSpace: false },
-  goodgirl: { min: 0, max: 100, levels: [30, 70], label: "good girl level", unit: "%", unitSpace: false },
-  nerd: { min: 0, max: 100, levels: [30, 70], label: "nerd level", unit: "%", unitSpace: false },
-  pirate: { min: 0, max: 100, levels: [30, 70], label: "pirate power", unit: "%", unitSpace: false },
-  princess: { min: 0, max: 100, levels: [30, 70], label: "princess energy", unit: "%", unitSpace: false },
-  swordlunge: { min: 0, max: 100, levels: [30, 70], label: "sword lunge effectiveness", unit: "%", unitSpace: false },
-  flame: { min: 0, max: 100, levels: [30, 70], label: "flame love", unit: "%", unitSpace: false },
-  tinkabell: { min: 0, max: 100, levels: [20, 60], label: "tinkabell level", unit: "%", unitSpace: false },
+  clowning: { min: 0, max: 100, levels: [20, 50], label: "clowning around", unit: "%", unitSpace: false },
+  heroComplex: { min: 0, max: 100, levels: [30, 70], label: "hero complex", unit: "%", unitSpace: false },
+  darkHumor: { min: 0, max: 100, levels: [10, 50], label: "dark humor", unit: "%", unitSpace: false },
+  whimsicality: { min: 0, max: 100, levels: [25, 65], label: "whimsicality", unit: "%", unitSpace: false },
+  ambition: { min: 0, max: 100, levels: [40, 80], label: "ambition", unit: "%", unitSpace: false },
+  mischief: { min: 0, max: 100, levels: [20, 60], label: "mischief level", unit: "%", unitSpace: false },
+  bookishness: { min: 0, max: 100, levels: [30, 70], label: "bookishness", unit: "%", unitSpace: false },
+  zen: { min: 0, max: 100, levels: [30, 80], label: "zen", unit: "%", unitSpace: false },
+  selfConfidence: { min: 0, max: 100, levels: [30, 80], label: "self-confidence", unit: "%", unitSpace: false },
+  thoughtfulness: { min: 0, max: 100, levels: [40, 90], label: "thoughtfulness", unit: "%", unitSpace: false },
+  creativity: { min: 0, max: 100, levels: [10, 50], label: "creativity", unit: "%", unitSpace: false },
+  spontaneity: { min: 0, max: 100, levels: [20, 70], label: "spontaneity", unit: "%", unitSpace: false },
+  cookingSkills: { min: 0, max: 100, levels: [20, 60], label: "cooking skills", unit: "%", unitSpace: false },
+  competitiveSpirit: { min: 0, max: 100, levels: [40, 90], label: "competitive spirit", unit: "%", unitSpace: false },
+  eccentricity: { min: 0, max: 100, levels: [30, 70], label: "eccentricity", unit: "%", unitSpace: false },
+  sassiness: { min: 0, max: 100, levels: [40, 90], label: "sassiness", unit: "%", unitSpace: false },
+  imagination: { min: 0, max: 100, levels: [20, 60], label: "imagination", unit: "%", unitSpace: false },
+  nurturingInstinct: { min: 0, max: 100, levels: [30, 70], label: "nurturing instinct", unit: "%", unitSpace: false },
+  patience: { min: 0, max: 100, levels: [20, 50], label: "patience", unit: "%", unitSpace: false },
+  charisma: { min: 0, max: 100, levels: [50, 90], label: "charisma", unit: "%", unitSpace: false },
+  luck: { min: 1, max: 10, levels: [3, 7], label: "luck roll", unit: "/10", unitSpace: false },
 };
 
 // ===========================================
@@ -334,21 +368,29 @@ const personality = {
 // ===========================================
 
 const gym = {
-lift: { min: 0, max: 500, levels: [100, 300], label: "lifting power", unit: "kg", unitSpace: false },
-run: { min: 0, max: 42, levels: [10, 25], label: "running distance", unit: "km", unitSpace: false },
-sprint: { min: 0, max: 100, levels: [30, 70], label: "sprint speed", unit: "m/s", unitSpace: false },
-deadlift: { min: 0, max: 500, levels: [100, 300], label: "deadlift weight", unit: "kg", unitSpace: false },
-curl: { min: 0, max: 200, levels: [20, 80], label: "curl strength", unit: "kg", unitSpace: false },
-row: { min: 0, max: 1000, levels: [100, 500], label: "rowing distance", unit: "m", unitSpace: false },
-stretch: { min: 0, max: 100, levels: [30, 70], label: "flexibility", unit: "%", unitSpace: false },
+  lift: { min: 0, max: 500, levels: [100, 300], label: "lifting power", unit: "kg", unitSpace: false },
+  run: { min: 0, max: 42, levels: [10, 25], label: "running distance", unit: "km", unitSpace: false },
+  sprint: { min: 0, max: 100, levels: [30, 70], label: "sprint speed", unit: "m/s", unitSpace: false },
+  deadlift: { min: 0, max: 500, levels: [100, 300], label: "deadlift weight", unit: "kg", unitSpace: false },
+  curl: { min: 0, max: 200, levels: [20, 80], label: "curl strength", unit: "kg", unitSpace: false },
+  row: { min: 0, max: 1000, levels: [100, 500], label: "rowing distance", unit: "m", unitSpace: false },
+  stretch: { min: 0, max: 100, levels: [30, 70], label: "flexibility", unit: "%", unitSpace: false },
 };
 
 // ===========================================
 // 🏦 HOLD
 // ===========================================
-
 const hold = {
-gold: { min: 0, max: 100, levels: [30, 70], label: "gold pouch", unit: "coins", unitSpace: true },
+  gold: { min: 0, max: 100, levels: [30, 70], label: "gold pouch", unit: "coins", unitSpace: true },
+};
+
+// ===========================================
+// 🏦 CARRY
+// ===========================================
+
+const carry = {
+  weight: { min: 0, max: 200, levels: [50, 150], label: "carry weight", unit: "kg", unitSpace: false },
+  items: { min: 0, max: 100, levels: [10, 50], label: "carry items", unit: "items", unitSpace: true },
 };
 
 // ===========================================
@@ -356,11 +398,23 @@ gold: { min: 0, max: 100, levels: [30, 70], label: "gold pouch", unit: "coins", 
 // ===========================================
 
 const actions = {
-squeeze: { min: 0, max: 100, levels: [30, 70], label: "squeeze strength", unit: "%", unitSpace: true },
-push: { min: 0, max: 100, levels: [30, 70], label: "push power", unit: "kg", unitSpace: true },
-jump: { min: 0, max: 100, levels: [30, 70], label: "jump height", unit: "cm", unitSpace: true },
-press: { min: 0, max: 100, levels: [30, 70], label: "press strength", unit: "kg", unitSpace: true },
-kick: { min: 0, max: 100, levels: [30, 70], label: "kick power", unit: "%", unitSpace: true },
+  squeeze: { min: 0, max: 100, levels: [30, 70], label: "squeeze strength", unit: "%", unitSpace: true },
+  push: { min: 0, max: 100, levels: [30, 70], label: "push power", unit: "kg", unitSpace: true },
+  jump: { min: 0, max: 100, levels: [30, 70], label: "jump height", unit: "cm", unitSpace: true },
+  press: { min: 0, max: 100, levels: [30, 70], label: "press strength", unit: "kg", unitSpace: true },
+  kick: { min: 0, max: 100, levels: [30, 70], label: "kick power", unit: "%", unitSpace: true },
+  dodge: { min: 0, max: 100, levels: [30, 70], label: "dodge agility", unit: "%", unitSpace: true },
+  roll: { min: 0, max: 100, levels: [30, 70], label: "roll distance", unit: "m", unitSpace: true },
+  slide: { min: 0, max: 100, levels: [30, 70], label: "slide speed", unit: "m/s", unitSpace: true },
+  climb: { min: 0, max: 100, levels: [30, 70], label: "climb speed", unit: "m/s", unitSpace: true },
+  punch: { min: 0, max: 100, levels: [30, 70], label: "punch power", unit: "kg", unitSpace: true },
+  block: { min: 0, max: 100, levels: [30, 70], label: "block strength", unit: "%", unitSpace: true },
+  tackle: { min: 0, max: 100, levels: [30, 70], label: "tackle force", unit: "kg", unitSpace: true },
+  throw: { min: 0, max: 100, levels: [30, 70], label: "throw accuracy", unit: "%", unitSpace: true },
+  kickflip: { min: 0, max: 100, levels: [30, 70], label: "kickflip ability", unit: "%", unitSpace: true },
+  spin: { min: 0, max: 100, levels: [30, 70], label: "spin speed", unit: "rpm", unitSpace: true },
+  uppercut: { min: 0, max: 100, levels: [30, 70], label: "uppercut power", unit: "kg", unitSpace: true },
+  grapple: { min: 0, max: 100, levels: [30, 70], label: "grapple strength", unit: "%", unitSpace: true },
 };
 
 // ===========================================
@@ -368,13 +422,23 @@ kick: { min: 0, max: 100, levels: [30, 70], label: "kick power", unit: "%", unit
 // ===========================================
 
 const emotions = {
-happiness: { min: 0, max: 100, levels: [30, 70], label: "happiness", unit: "%", unitSpace: true },
-anger: { min: 0, max: 100, levels: [30, 70], label: "anger level", unit: "%", unitSpace: false },
-calmness: { min: 0, max: 100, levels: [30, 70], label: "calmness", unit: "%", unitSpace: true },
-joy: { min: 0, max: 100, levels: [30, 70], label: "joy level", unit: "%", unitSpace: true },
-excitement: { min: 0, max: 100, levels: [30, 70], label: "excitement", unit: "%", unitSpace: true },
-energy: { min: 0, max: 100, levels: [30, 70], label: "energy level", unit: "%", unitSpace: false },
-sleep: { min: 0, max: 100, levels: [30, 70], label: "sleep needed", unit: "%", unitSpace: false },
+  happiness: { min: 0, max: 100, levels: [30, 70], label: "happiness", unit: "%", unitSpace: true },
+  anger: { min: 0, max: 100, levels: [30, 70], label: "anger level", unit: "%", unitSpace: false },
+  calmness: { min: 0, max: 100, levels: [30, 70], label: "calmness", unit: "%", unitSpace: true },
+  joy: { min: 0, max: 100, levels: [30, 70], label: "joy level", unit: "%", unitSpace: true },
+  excitement: { min: 0, max: 100, levels: [30, 70], label: "excitement", unit: "%", unitSpace: true },
+  energy: { min: 0, max: 100, levels: [30, 70], label: "energy level", unit: "%", unitSpace: false },
+  sleep: { min: 0, max: 100, levels: [30, 70], label: "sleep needed", unit: "%", unitSpace: false },
+  sadness: { min: 0, max: 100, levels: [30, 70], label: "sadness level", unit: "%", unitSpace: true },
+  anxiety: { min: 0, max: 100, levels: [30, 70], label: "anxiety level", unit: "%", unitSpace: true },
+  love: { min: 0, max: 100, levels: [30, 70], label: "love level", unit: "%", unitSpace: true },
+  nostalgia: { min: 0, max: 100, levels: [30, 70], label: "nostalgia level", unit: "%", unitSpace: true },
+  gratitude: { min: 0, max: 100, levels: [30, 70], label: "gratitude level", unit: "%", unitSpace: true },
+  guilt: { min: 0, max: 100, levels: [30, 70], label: "guilt level", unit: "%", unitSpace: true },
+  pride: { min: 0, max: 100, levels: [30, 70], label: "pride level", unit: "%", unitSpace: true },
+  frustration: { min: 0, max: 100, levels: [30, 70], label: "frustration level", unit: "%", unitSpace: true },
+  hope: { min: 0, max: 100, levels: [30, 70], label: "hope level", unit: "%", unitSpace: true },
+  love_hate_balance: { min: 0, max: 100, levels: [30, 70], label: "love vs hate balance", unit: "%", unitSpace: true },
 };
 
 // ===========================================
@@ -382,12 +446,208 @@ sleep: { min: 0, max: 100, levels: [30, 70], label: "sleep needed", unit: "%", u
 // ===========================================
 
 const skills = {
-precision: { min: 0, max: 100, levels: [30, 70], label: "precision", unit: "%", unitSpace: false },
-accuracy: { min: 0, max: 100, levels: [30, 70], label: "accuracy", unit: "%", unitSpace: false },
-focus: { min: 0, max: 100, levels: [30, 70], label: "focus level", unit: "%", unitSpace: false },
-flirting: { min: 0, max: 100, levels: [30, 70], label: "flirting skill", unit: "%", unitSpace: false },
-luck: { min: 1, max: 10, levels: [3, 7], label: "luck roll", unit: "/10", unitSpace: false },
-dj: { min: 1, max: 10, levels: [3, 7], label: "DJ skill level ", unit: "%", unitSpace: false },
+  precision: { min: 0, max: 100, levels: [30, 70], label: "precision", unit: "%", unitSpace: false },
+  accuracy: { min: 0, max: 100, levels: [30, 70], label: "accuracy", unit: "%", unitSpace: false },
+  focus: { min: 0, max: 100, levels: [30, 70], label: "focus level", unit: "%", unitSpace: false },
+  flirting: { min: 0, max: 100, levels: [30, 70], label: "flirting skill", unit: "%", unitSpace: false },
+  dj: { min: 1, max: 10, levels: [3, 7], label: "DJ skill level", unit: "/10", unitSpace: false },
+  intelligence: { min: 0, max: 100, levels: [30, 70], label: "intelligence", unit: "%", unitSpace: false },
+  stealth: { min: 0, max: 100, levels: [30, 70], label: "stealth", unit: "%", unitSpace: false },
+  cooking: { min: 0, max: 100, levels: [30, 70], label: "cooking skill", unit: "%", unitSpace: false },
+  leadership: { min: 0, max: 100, levels: [30, 70], label: "leadership ability", unit: "%", unitSpace: false },
+  negotiation: { min: 0, max: 100, levels: [30, 70], label: "negotiation skill", unit: "%", unitSpace: false },
+  martial_arts: { min: 0, max: 100, levels: [30, 70], label: "martial arts skill", unit: "%", unitSpace: false },
+  strength: { min: 0, max: 100, levels: [30, 70], label: "strength", unit: "%", unitSpace: false },
+  adaptability: { min: 0, max: 100, levels: [30, 70], label: "adaptability", unit: "%", unitSpace: false },
+};
+
+// ===========================================
+// 🎯 PIRATE
+// ===========================================
+
+const piracy = {
+  pirate: { min: 0, max: 100, levels: [30, 70], label: "piracy skill", unit: "%", unitSpace: false },
+  captain: { min: 0, max: 100, levels: [30, 70], label: "captain skill", unit: "%", unitSpace: false },
+  treasure_hunting: { min: 0, max: 100, levels: [30, 70], label: "treasure hunting", unit: "%", unitSpace: false },
+  sea_navigation: { min: 0, max: 100, levels: [30, 70], label: "sea navigation", unit: "%", unitSpace: false },
+  ship_maintenance: { min: 0, max: 100, levels: [30, 70], label: "ship maintenance", unit: "%", unitSpace: false },
+  swordsmanship: { min: 0, max: 100, levels: [30, 70], label: "swordsmanship", unit: "%", unitSpace: false },
+  swashbuckling: { min: 0, max: 100, levels: [30, 70], label: "swashbuckling", unit: "%", unitSpace: false },
+  plunder: { min: 0, max: 100, levels: [30, 70], label: "plunder efficiency", unit: "%", unitSpace: false },
+  cannon_use: { min: 0, max: 100, levels: [30, 70], label: "cannon use", unit: "%", unitSpace: false },
+  crew_morale: { min: 0, max: 100, levels: [30, 70], label: "crew morale", unit: "%", unitSpace: false },
+  intimidation: { min: 0, max: 100, levels: [30, 70], label: "intimidation level", unit: "%", unitSpace: false },
+  parley: { min: 0, max: 100, levels: [30, 70], label: "parley skill", unit: "%", unitSpace: false },
+};
+
+// ===========================================
+// 🐾 ANIMAL VIBES
+// ===========================================
+const animal = {
+  animal: {
+    list: [
+      "🦁 Lion", "🐯 Tiger", "🐻 Bear", "🐶 Dog", "🐱 Cat",
+      "🦊 Fox", "🐼 Panda", "🐨 Koala", "🐸 Frog", "🐵 Monkey",
+      "🦄 Unicorn", "🐍 Snake", "🦅 Eagle", "🐺 Wolf", "🐢 Turtle"
+    ],
+    label: "animal spirit"
+  }
+};
+
+// ===========================================
+// 🍹 DRINK VIBES
+// ===========================================
+const drink = {
+  drink: {
+    list: [
+      "☕ Coffee", "🍵 Tea", "🍸 Martini", "🍹 Mojito", "🍺 Beer",
+      "🥃 Whiskey", "🍷 Red Wine", "🥂 Champagne", "🧋 Boba Tea",
+      "🍋 Lemonade", "🍫 Hot Chocolate", "🍶 Sake", "🥛 Milk",
+      "🧃 Juice", "🍈 Melon Soda"
+    ],
+    label: "drink of the day"
+  }
+};
+
+// ===========================================
+// 🎨 COLORS
+// ===========================================
+const colors = {
+  colors: {
+    list: [
+      "💚 Green", "💙 Blue", "💛 Yellow", "❤️ Red", "🖤 Black",
+      "🤍 White", "💜 Purple", "🧡 Orange", "💖 Pink", "🌈 Rainbow"
+    ],
+    label: "color"
+  }
+};
+
+// ===========================================
+// 🧘 AURA VIBES
+// ===========================================
+const auravibes = {
+  auravibes: {
+    list: [
+      "✨ Radiant", "🌊 Calm", "🔥 Fiery", "🌱 Grounded", "💫 Mystical",
+      "🌸 Gentle", "⚡ Energetic", "🪐 Cosmic", "🌙 Dreamy", "🌟 Sparkling"
+    ],
+    label: "aura vibe"
+  }
+};
+
+// ===========================================
+// 🏴 PIRATE VIBES
+// ===========================================
+const piratevibes = {
+  piratevibes: {
+    list: [
+      "🏴‍☠️ Swashbuckler", "⚓ Captain", "🦜 Parrot Whisperer",
+      "💰 Treasure Hunter", "🔥 Cannon Master", "🗺️ Navigator",
+      "🦑 Sea Monster Tamer"
+    ],
+    label: "pirate vibe"
+  }
+};
+
+// ===========================================
+// 🧙 WIZARD VIBES
+// ===========================================
+const wizardvibes = {
+  wizardvibes: {
+    list: [
+      "🪄 Apprentice", "✨ Sorcerer", "📜 Spellcaster", "🔮 Seer",
+      "🔥 Pyromancer", "❄️ Cryomancer", "🌀 Warlock"
+    ],
+    label: "wizard vibe"
+  }
+};
+
+// ===========================================
+// 👗 DAILY OUTFIT / STYLE
+// ===========================================
+const outfits = {
+  outfits: {
+    list: [
+      "🧥 Casual Chic", "👗 Elegant", "👕 Sporty", "🩳 Relaxed", "👘 Traditional",
+      "🧣 Cozy", "🕶️ Trendy", "🦸 Heroic", "🎭 Costume", "🥋 Martial"
+    ],
+    label: "outfit/style"
+  }
+};
+
+// ===========================================
+// ⚡ ELEMENTAL AFFINITY
+// ===========================================
+const elements = {
+  elements: {
+    list: ["🔥 Fire", "💧 Water", "🌱 Earth", "💨 Air", "⚡ Lightning", "❄️ Ice", "🌌 Void"],
+    label: "elemental affinity"
+  }
+};
+
+// ===========================================
+// ⚡ DAILY POWER / ABILITY
+// ===========================================
+const powers = {
+  powers: {
+    list: [
+      "💪 Super Strength", "🧠 Telepathy", "🦾 Tech Genius", "🌀 Time Manipulation",
+      "🕶️ Invisibility", "⚡ Lightning Speed", "🌌 Cosmic Awareness"
+    ],
+    label: "power/ability"
+  }
+};
+
+// ===========================================
+// 🏴 PIRATE OUTFITS / ACCESSORIES
+// ===========================================
+const pirateoutfits = {
+  pirateoutfits: {
+    list: [
+      "🪖 Tricorn Hat", "🧥 Captain’s Coat", "🦜 Parrot Companion",
+      "💰 Gold Earrings", "⚓ Anchor Tattoo", "🗡️ Cutlass", "🦴 Peg Leg"
+    ],
+    label: "pirate accessory"
+  }
+};
+
+// ===========================================
+// 🧙 WIZARD ITEMS / ACCESSORIES
+// ===========================================
+const wizarditems = {
+  wizarditems: {
+    list: [
+      "🪄 Wand", "📜 Spellbook", "🔮 Crystal Ball", "🧙 Robe",
+      "🧪 Potion", "🪞 Mirror of Insight", "🧹 Flying Broom"
+    ],
+    label: "wizard item"
+  }
+};
+
+// ===========================================
+// 🌟 ELEMENTAL ITEMS / ACCESSORIES
+// ===========================================
+const elementalitems = {
+  elementalitems: {
+    list: [
+      "🔥 Fire Amulet", "💧 Water Orb", "🌱 Earth Ring", "💨 Air Pendant",
+      "⚡ Lightning Bracelet", "❄️ Ice Crystal", "🌌 Void Charm"
+    ],
+    label: "elemental item"
+  }
+};
+
+// ===========================================
+// 🧘 AURA ACCESSORIES
+// ===========================================
+const auraitems = {
+  auraitems: {
+    list: [
+      "✨ Crystal Necklace", "🌸 Flower Crown", "🪐 Cosmic Ring",
+      "🌊 Water Bracelet", "🔥 Flame Pendant", "🌙 Moon Charm"
+    ],
+    label: "aura accessory"
+  }
 };
 
 // ===========================================
@@ -413,6 +673,147 @@ const interactions = [
 // ===========================================
 
 const jokes = {
+  animal: [
+    "You’re feeling regal and mighty today! 🦁",
+    "Ferocious energy surging through you! 🐯",
+    "Strong and grounded vibes. 🐻",
+    "Loyal and playful spirit today. 🐶",
+    "Curious and clever! 🐱",
+    "Sly and mischievous energy. 🦊",
+    "Cuddly and relaxed today. 🐼",
+    "Calm and sleepy — taking it slow. 🐨",
+    "Leaping into the day! 🐸",
+    "Cheeky and fun energy. 🐵",
+    "Magical and unique — unicorn vibes! 🦄",
+    "Sinuous and mysterious. 🐍",
+    "Soaring above challenges. 🦅",
+    "Wild and adventurous! 🐺",
+    "Slow but steady today. 🐢"
+  ],
+  drink: [
+    "Strong and bold — just like your coffee! ☕",
+    "Calm and soothing today, like tea. 🍵",
+    "Feeling fancy and elegant. 🍸",
+    "Refreshing and lively — mojito vibes! 🍹",
+    "Chilled out with a casual brew. 🍺",
+    "Strong spirit and full-bodied energy! 🥃",
+    "Rich and smooth, like red wine. 🍷",
+    "Sparkling and celebratory today! 🥂",
+    "Fun and playful, like boba tea. 🧋",
+    "Zesty and bright — lemonade mood! 🍋",
+    "Sweet comfort for the soul. 🍫",
+    "Exotic and refined — sake style. 🍶",
+    "Simple and wholesome today. 🥛",
+    "Juicy and energizing! 🧃",
+    "Sweet, fruity, and bubbly vibes. 🍈"
+  ],
+  colors: [
+    "Feeling fresh and natural! 🌿",
+    "Calm and serene, like the ocean. 🌊",
+    "Sunny and cheerful today! ☀️",
+    "Passionate energy detected! 🔥",
+    "Mysterious and deep vibes. 🌑",
+    "Pure and peaceful today. 🕊️",
+    "Royal and majestic energy! 👑",
+    "Warm and vibrant today! 🍊",
+    "Sparkly and sweet vibes! ✨",
+    "Rainbow energy — all the colors of you! 🌈"
+  ],
+  auravibes: [
+    "Your aura is shining bright today! ✨",
+    "Flowing like a gentle river. 🌊",
+    "Burning with unstoppable energy! 🔥",
+    "Centered and strong. 🌱",
+    "Mystical and mysterious vibes. 💫",
+    "Soft and peaceful aura. 🌸",
+    "Charged and vibrant! ⚡",
+    "Cosmic energy surrounds you. 🪐",
+    "Dreamy and whimsical mood. 🌙",
+    "Sparkles everywhere you go! 🌟"
+  ],
+  piratevibes: [
+    "Ahoy! Ready to plunder the day! 🏴‍☠️",
+    "All hands on deck, captain! ⚓",
+    "Squawking secrets with your feathered friends! 🦜",
+    "Gold and jewels are calling your name! 💰",
+    "Boom! Cannons at the ready! 🔥",
+    "Charting a course to greatness! 🗺️",
+    "Taming the sea’s fiercest creatures! 🦑"
+  ],
+  wizard: [
+    "Casting charm spells like a pro! 🪄",
+    "Magical energy flows through you ✨",
+    "Beware, your incantations may misfire 😏",
+    "Seeing visions and mysteries today 🔮",
+    "You’re on fire… literally 🔥",
+    "Ice cold and magical ❄️",
+    "Dark magic, light heart 🌀"
+  ],
+  outfits: [
+    "Looking stylish today! 🧥",
+    "Elegance is in your aura. 👗",
+    "Active and sporty vibes! 👕",
+    "Relaxed and comfy — love it! 🩳",
+    "Honoring tradition with style. 👘",
+    "Cozy and warm for the day. 🧣",
+    "Trendy and fashionable! 🕶️",
+    "Heroic energy in your outfit! 🦸",
+    "Fun and playful — embrace the costume! 🎭",
+    "Power moves only, dressed to conquer! 🥋"
+  ],
+  elements: [
+    "Burning bright today! 🔥",
+    "Flowing smoothly and cool. 💧",
+    "Strong and grounded. 🌱",
+    "Light and breezy vibes. 💨",
+    "Electric energy surging! ⚡",
+    "Chilly and sharp! ❄️",
+    "Mysterious and cosmic. 🌌"
+  ],
+  powers: [
+    "Unstoppable strength today! 💪",
+    "Reading minds like a pro! 🧠",
+    "Inventive genius in full swing! 🦾",
+    "Time waits for no one — you control it! 🌀",
+    "Disappear like a shadow. 🕶️",
+    "Fast as lightning! ⚡",
+    "Cosmic awareness at its peak! 🌌"
+  ],
+  pirateoutfits: [
+    "Looking ready to plunder! 🪖",
+    "Captain chic on point! 🧥",
+    "Your parrot is your hype squad! 🦜",
+    "Gold shines brighter on you 💰",
+    "Anchors aweigh! ⚓",
+    "Sharp and deadly today! 🗡️",
+    "Walking like a true pirate 🦴"
+  ],
+  wizarditems: [
+    "Your wand is ready! 🪄",
+    "Spellbook full of secrets! 📜",
+    "Seeing all the mysteries 🔮",
+    "Robe flowing magically 🧙",
+    "Potion brewed to perfection 🧪",
+    "Mirror reveals your true self 🪞",
+    "Flying high on broomstick adventures 🧹"
+  ],
+  elementalitems: [
+    "Feeling the fire within! 🔥",
+    "Smooth and flowing energy 💧",
+    "Grounded and strong 🌱",
+    "Breezy and light today 💨",
+    "Shocking power surging ⚡",
+    "Chill and steady ❄️",
+    "Mysterious cosmic energy 🌌"
+  ],
+  auraitems: [
+    "Shining bright like a crystal ✨",
+    "Floral energy blooming 🌸",
+    "Cosmic vibes surround you 🪐",
+    "Flowing like water today 🌊",
+    "Fiery passion burning 🔥",
+    "Moonlight magic shines 🌙"
+  ],
 tinkabell: {
 low: ["your fairy level is FUCKING DISGUSTING. 😂", "You shine bright like a diamond...covered in shit. 💩"],
 medium: ["Your wings are growing. 🦋", "fairy training is starting to pay off. 💖"],
@@ -478,11 +879,66 @@ low: ["Not very daddy today. 😬", "Maybe work on your confidence. 💪"],
 medium: ["You are somewhat daddy. 👨", "The vibes are respectable. 👍"],
 high: ["Certified DILF energy. 😎", "The room goes quiet when you enter. 🕴"],
 },
+mama: {
+low: ["Not very mama today. 😬", "Maybe work on your confidence. 💪"],
+medium: ["You are somewhat mama. 👨", "The vibes are respectable. 👍"],
+high: ["Certified MAMA energy. 😎", "The room goes quiet when you enter. 🕴"],
+},
 pirate: {
 low: ["You dropped your compass. 🧭", "Your ship is still in dock. 🚢"],
 medium: ["You are swashbuckling nicely. ⚓", "The crew respects you. 👑"],
 high: ["Captain material! 🏴‍☠️", "The seas whisper your name! 🌊"],
 },
+treasure_hunting: {
+low: ["Ye found an empty chest... again. 🪣", "Turns out the 'X' was bird poop. 🕊️"],
+medium: ["You dug up some fine silver doubloons! 💰", "Aye, your shovel arm be strong today! ⛏️"],
+high: ["You struck gold, Captain! 🏆", "Legend says the treasure sings your name! 🎶🏴‍☠️"],
+},
+sea_navigation: {
+low: ["You're sailing in circles... 🌪️", "Landlubber, that’s not north! 🧭"],
+medium: ["Smooth sailing, matey. 🌊", "Your course be true, as any good sailor’s should. ⚓"],
+high: ["You ride the stars like a legend! 🌟", "The sea parts before ye, Navigator Supreme! 🚢✨"],
+},
+ship_maintenance: {
+low: ["The hull’s leaking like a sieve! 💦", "Ye forgot to swab the deck... again. 🧽"],
+medium: ["Aye, she’s shipshape and sturdy. ⚒️", "The rigging’s tight, the sails clean! ⛵"],
+high: ["Your ship gleams brighter than gold! 🏴‍☠️✨", "Even Poseidon admires your craftsmanship! 🌊🔧"],
+},
+swordsmanship: {
+low: ["You tripped over your own cutlass. 🗡️😅", "Careful! That’s the blunt side, mate. 🙃"],
+medium: ["Your strikes be fierce and true! ⚔️", "Steel sings in your hands! 🪶"],
+high: ["You duel like a legend of the seas! 🏴‍☠️", "No blade can best ye, Captain! 👑⚔️"],
+},
+swashbuckling: {
+low: ["You dropped your hat mid-swing! 🎩", "Not quite the hero’s entrance you imagined... 😬"],
+medium: ["You swing across the deck with style! 🦜", "That’s a fine buckle you’ve swashed! 💃🏴‍☠️"],
+high: ["The crowd cheers your daring stunts! 🎉", "Even Blackbeard would applaud ye! ☠️🔥"],
+},
+plunder: {
+low: ["Ye raided an empty barrel... 🪣", "No loot today, just splinters. 🪵"],
+medium: ["You grabbed a fair haul! 💰", "The booty be plentiful, matey! 🏴‍☠️"],
+high: ["You emptied a fleet’s worth of gold! 🏆", "The sea trembles at your greed! 💎☠️"],
+},
+cannon_use: {
+low: ["You fired... backwards. 💥🙈", "The fuse went out. Maybe next time. 🕯️"],
+medium: ["Good shot, ye hit the target! 🎯", "A clean blast! The crew cheers! 🏴‍☠️💥"],
+high: ["Perfect aim, Captain! 💀", "The enemy ship’s in splinters! 💣🔥"],
+},
+crew_morale: {
+low: ["The crew’s grumbling, Captain... 😠", "Mutiny whispers on the wind. 🌪️"],
+medium: ["The men sing shanties and drink rum! 🍻", "Your crew stands loyal and strong. ⚓"],
+high: ["The crew would follow ye to Davy Jones! ☠️", "Your name lifts hearts across the sea! 🏴‍☠️❤️"],
+},
+intimidation: {
+low: ["A seagull just stole your hat. 🐦", "The tavern laughed instead of fleeing. 🍺😂"],
+medium: ["Your glare be enough to freeze a man’s soul. 👀", "The crew obeys without question. ☠️"],
+high: ["Your mere presence makes krakens tremble! 🐙💀", "Legends whisper your wrath! ⚓🔥"],
+},
+parley: {
+low: ["You spilled rum on the negotiation table. 🍹", "They took your word... and your boots. 🥾"],
+medium: ["You struck a fair bargain, Captain. ⚖️", "Your tongue be as sharp as your sword. 💬⚔️"],
+high: ["You turned enemies into allies with a word! 🤝🏴‍☠️", "Your diplomacy saves fleets! 🕊️🌊"],
+  },
 swordlunge: {
 low: ["You tripped on the lunge. 🤦‍♂️", "Practice makes perfect. 💪"],
 medium: ["A clean strike. ⚔️", "Your stance is strong. 💪"],
@@ -719,10 +1175,226 @@ return message;
 };
 
 // ===========================================
+// 🍑 BOOTY BATTLE
+// ===========================================
+
+miniGames.bootybattle = (senderRaw, userRaw) => {
+  const sender = cleanUsername(senderRaw);
+  const target = cleanUsername(userRaw);
+  const senderDisplay = formatDisplayName(senderRaw);
+  const targetDisplay = formatDisplayName(userRaw);
+
+  if (!userRaw || sender === target) {
+    return `🍑 ${senderDisplay} tried to compare booties with themselves... confidence or madness? 🤔`;
+  }
+
+  const today = new Date().toLocaleDateString("en-GB");
+  const seedSender = `${today}-booty-${sender}`;
+  const seedTarget = `${today}-booty-${target}`;
+
+  const cfg = custombutt.butt;
+  const senderBooty = generateValue(seedSender, "butt", cfg.max, cfg.min, sender);
+  const targetBooty = generateValue(seedTarget, "butt", cfg.max, cfg.min, target);
+
+  if (senderBooty === targetBooty) {
+    return `⚖️ ${senderDisplay} and ${targetDisplay} both have equally glorious booties at ${senderBooty}% fruitiness! 🍑 A tie worthy of song! 🎶`;
+  }
+
+  const winner = senderBooty > targetBooty
+    ? { name: senderDisplay, booty: senderBooty }
+    : { name: targetDisplay, booty: targetBooty };
+  const loser = senderBooty > targetBooty
+    ? { name: targetDisplay, booty: targetBooty }
+    : { name: senderDisplay, booty: senderBooty };
+
+  const outcomes = [
+    `🍑 ${winner.name} shook that booty with ${winner.booty}% fruitiness! ${loser.name} tried... but gravity was not on their side. ⚓`,
+    `🏴‍☠️ ${winner.name} wins the Booty Battle! ${loser.name} must polish the captain’s chair in shame (${winner.booty}% vs ${loser.booty}%). 🪑`,
+    `🔥 ${winner.name}’s booty be the talk of the seven seas! ${loser.name} be left in the shadows (${winner.booty}% vs ${loser.booty}%). 🌊`,
+    `💫 ${winner.name} has the juiciest booty in all the ports! ${loser.name} can only stare in awe. 🍑`
+  ];
+
+  return pickRandom(outcomes);
+};
+
+// ===========================================
+// 💰 PLUNDER RAID
+// ===========================================
+
+miniGames.plunderraid = (senderRaw, userRaw) => {
+  const sender = cleanUsername(senderRaw);
+  const target = cleanUsername(userRaw);
+  const senderDisplay = formatDisplayName(senderRaw);
+  const targetDisplay = formatDisplayName(userRaw);
+
+  if (!userRaw || sender === target) {
+    return `🏴‍☠️ ${senderDisplay} tried to raid their own ship... that’s mutiny, ye scallywag! ⚓`;
+  }
+
+  const today = new Date().toLocaleDateString("en-GB");
+  const seedSender = `${today}-plunder-${sender}`;
+  const seedTarget = `${today}-plunder-${target}`;
+
+  const cfg = piracy.plunder;
+  const senderLoot = generateValue(seedSender, "plunder", cfg.max, cfg.min, sender);
+  const targetLoot = generateValue(seedTarget, "plunder", cfg.max, cfg.min, target);
+
+  if (senderLoot === targetLoot) {
+    return `💎 ${senderDisplay} and ${targetDisplay} raided the same island and found equal treasure (${senderLoot}% each)! A fair share for both crews! ⚖️`;
+  }
+
+  const winner = senderLoot > targetLoot
+    ? { name: senderDisplay, loot: senderLoot }
+    : { name: targetDisplay, loot: targetLoot };
+  const loser = senderLoot > targetLoot
+    ? { name: targetDisplay, loot: targetLoot }
+    : { name: senderDisplay, loot: senderLoot };
+
+  const outcomes = [
+    `💰 ${winner.name} pillaged with unmatched fury, looting ${winner.loot}% of the treasure! ${loser.name} was left with scraps (${loser.loot}%). 🪙`,
+    `🏴‍☠️ ${winner.name} struck gold while ${loser.name} found only coconuts. A rich victory! 🥥💎`,
+    `🔥 ${winner.name}’s crew raided the fort, leaving ${loser.name} adrift in shame! (${winner.loot}% vs ${loser.loot}%) ☠️`,
+    `🪓 ${winner.name} took the booty and the bragging rights! ${loser.name}’s crew be swabbing decks for a week! 🧽`
+  ];
+
+  return pickRandom(outcomes);
+};
+
+// ===========================================
+// 🔫 PISTOL DUEL
+// ===========================================
+
+miniGames.pistolfight = (senderRaw, userRaw) => {
+  const sender = cleanUsername(senderRaw);
+  const target = cleanUsername(userRaw);
+  const senderDisplay = formatDisplayName(senderRaw);
+  const targetDisplay = formatDisplayName(userRaw);
+
+  if (!userRaw || sender === target) {
+    return `💥 ${senderDisplay} tried to duel themselves... and missed! 🤦‍☠️`;
+  }
+
+  const today = new Date().toLocaleDateString("en-GB");
+  const seedSender = `${today}-pistol-${sender}`;
+  const seedTarget = `${today}-pistol-${target}`;
+
+  const cfg = piracy.intimidation;
+  const senderAim = generateValue(seedSender, "intimidation", cfg.max, cfg.min, sender);
+  const targetAim = generateValue(seedTarget, "intimidation", cfg.max, cfg.min, target);
+
+  if (senderAim === targetAim) {
+    return `🔫 ${senderDisplay} and ${targetDisplay} fired at once — smoke clears, both unharmed! A draw at ${senderAim}%! ☁️`;
+  }
+
+  const winner = senderAim > targetAim
+    ? { name: senderDisplay, aim: senderAim }
+    : { name: targetDisplay, aim: targetAim };
+  const loser = senderAim > targetAim
+    ? { name: targetDisplay, aim: targetAim }
+    : { name: senderDisplay, aim: senderAim };
+
+  const outcomes = [
+    `💀 ${winner.name} shot true — ${loser.name} drops their pistol in surrender! (${winner.aim}% vs ${loser.aim}%) ⚓`,
+    `☠️ ${loser.name} fired too soon! ${winner.name} takes the win with cold precision! 🎯`,
+    `🔥 ${winner.name} blasted ${loser.name} clean off the deck! (${winner.aim}% vs ${loser.aim}%) 🏴‍☠️`,
+    `🏆 ${winner.name} wins the pistol duel! ${loser.name} be smokin’ — and not in a good way. 💨`
+  ];
+
+  return pickRandom(outcomes);
+};
+
+
+// ===========================================
+// 🚢 SHIP BATTLE DUEL
+// ===========================================
+
+miniGames.shipbattle = (senderRaw, userRaw) => {
+  const sender = cleanUsername(senderRaw);
+  const target = cleanUsername(userRaw);
+  const senderDisplay = formatDisplayName(senderRaw);
+  const targetDisplay = formatDisplayName(userRaw);
+
+  if (!userRaw || sender === target) {
+    return `🛳️ ${senderDisplay} tried to battle their own ship… the crew be confused! 🤔`;
+  }
+
+  const today = new Date().toLocaleDateString("en-GB");
+  const seedSender = `${today}-ship-${sender}`;
+  const seedTarget = `${today}-ship-${target}`;
+
+  const cfg = piracy.cannon_use;
+  const senderPower = generateValue(seedSender, "cannon_use", cfg.max, cfg.min, sender);
+  const targetPower = generateValue(seedTarget, "cannon_use", cfg.max, cfg.min, target);
+
+  if (senderPower === targetPower) {
+    return `💣 ${senderDisplay} and ${targetDisplay} fired their cannons — a perfect draw! Both ships still float (${senderPower}% vs ${targetPower}%)! ⚓`;
+  }
+
+  const winner = senderPower > targetPower
+    ? { name: senderDisplay, power: senderPower }
+    : { name: targetDisplay, power: targetPower };
+  const loser = senderPower > targetPower
+    ? { name: targetDisplay, power: targetPower }
+    : { name: senderDisplay, power: senderPower };
+
+  const outcomes = [
+    `💥 ${winner.name} broadside-shattered ${loser.name}’s hull! (${winner.power}% vs ${loser.power}%) — glorious victory! 🏴‍☠️`,
+    `🔥 ${loser.name}’s ship be sinking! ${winner.name} claims the spoils of the sea! ⚓`,
+    `🌊 ${winner.name} caught the wind just right — ${loser.name} be sent to Davy Jones’ locker! ☠️`,
+    `🏆 ${winner.name} wins the naval clash! ${loser.name} waves the white flag (${winner.power}% vs ${loser.power}%). 🏴‍☠️`
+  ];
+
+  return pickRandom(outcomes);
+};
+
+// ===========================================
+// ⚔️ SWORD FIGHT DUEL
+// ===========================================
+
+miniGames.swordfight = (senderRaw, userRaw) => {
+  const sender = cleanUsername(senderRaw);
+  const target = cleanUsername(userRaw);
+  const senderDisplay = formatDisplayName(senderRaw);
+  const targetDisplay = formatDisplayName(userRaw);
+
+  if (!userRaw || sender === target) {
+    return `☠️ ${senderDisplay} tried to duel themselves... ye fool! 🤦‍☠️`;
+  }
+
+  const today = new Date().toLocaleDateString("en-GB");
+  const seedSender = `${today}-sword-${sender}`;
+  const seedTarget = `${today}-sword-${target}`;
+
+  const cfg = piracy.swordsmanship;
+  const senderSkill = generateValue(seedSender, "swordsmanship", cfg.max, cfg.min, sender);
+  const targetSkill = generateValue(seedTarget, "swordsmanship", cfg.max, cfg.min, target);
+
+  if (senderSkill === targetSkill) {
+    return `⚔️ ${senderDisplay} and ${targetDisplay} clashed blades in an even match! Both fought bravely with skill ${senderSkill}%! 🏴‍☠️`;
+  }
+
+  const winner = senderSkill > targetSkill
+    ? { name: senderDisplay, skill: senderSkill }
+    : { name: targetDisplay, skill: targetSkill };
+  const loser = senderSkill > targetSkill
+    ? { name: targetDisplay, skill: targetSkill }
+    : { name: senderDisplay, skill: senderSkill };
+
+  const outcomes = [
+    `⚔️ ${winner.name} disarmed ${loser.name} with a dazzling display of blade mastery (${winner.skill}% vs ${loser.skill}%)! 🏴‍☠️`,
+    `💥 ${loser.name} took a step back as ${winner.name}’s sword gleamed under the sun — victory to ${winner.name}! ☠️`,
+    `🩸 ${winner.name} struck true! ${loser.name} drops their sword, humbled by skill ${winner.skill}%! ⚓`,
+    `🏆 ${winner.name} wins the duel! ${loser.name} shall be swabbing decks tonight (${winner.skill}% vs ${loser.skill}%). 🪣`
+  ];
+
+  return pickRandom(outcomes);
+};
+
+// ===========================================
 // ⚔️ PP DUEL
 // ===========================================
 
-miniGames.poduel = (senderRaw, userRaw) => {
+miniGames.ppduel = (senderRaw, userRaw) => {
 const sender = cleanUsername(senderRaw);
 const target = cleanUsername(userRaw);
 const senderDisplay = formatDisplayName(senderRaw);
@@ -764,9 +1436,12 @@ return pickRandom(outcomes);
 // ===========================================
 // 🧠 MAIN CODE ROUTE
 // ===========================================
+// ===========================================
+// 📅 DAILY STORAGE & COUNTERS
+// ===========================================
 
-const aspectsOfTheDay = { daddy: {}, pp: {}, bb: {}, princess: {}, goodgirl: {} }; // storage for "of the Day"
-const lock = {}; // lock mechanism
+const aspectsOfTheDay = { daddy: {}, pp: {}, bb: {}, princess: {}, goodgirl: {}, catmom: {}, stinker: {}, pirate: {}, captain: {}, animal: {}, drink: {} }; // storage for "of the Day" 
+const lock = {}; // lock mechanism 
 const statCounters = {}; // { username: { command: count } }
 const commandCounters = {}; // { command: totalCount }
 
@@ -840,6 +1515,74 @@ return res.send(message);
 }
 
 // ===========================================
+// 🏴‍☠️ CAPTAIN & CAPTAIN OF THE DAY
+// ===========================================
+
+if (type === "captain") {
+  const cfg = piracy.captain; // single stat only
+  value = generateValue(seed, type, cfg.max, cfg.min, sender);
+  const space = spaceIf(cfg.unitSpace);
+
+  if (value === 100 && !aspectsOfTheDay.captain[today]) {
+    aspectsOfTheDay.captain[today] = { user: sender, value };
+    message = `🏴‍☠️ ${senderDisplay}, ye stand tall at **100% Captain Power!** You are the *Captain of the Day!* ⚓️`;
+  } else if (value < 30) {
+    message = `☠️ ${senderDisplay}, ye barely passed cabin boy trials at ${value}${space}!`;
+  } else if (value < 70) {
+    message = `⚓ ${senderDisplay}, ye be a fine deckhand with ${value}${space} Captain prowess. Keep climbin’ the ranks!`;
+  } else {
+    message = `🏴‍☠️ ${senderDisplay}, the seas call your name with ${value}${space}% Captain power today!`;
+  }
+
+  // Track usage
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+  return res.send(message);
+}
+
+if (type === "captainofday") {
+  const winner = aspectsOfTheDay.captain[today];
+  return res.send(
+    winner
+      ? `🏴‍☠️ The *Captain of the Day* be ${formatDisplayName(winner.user)}! Raise the black flag and salute! ⚓️`
+      : "There be no Captain of the Day yet! Who will seize the helm? 🏴‍☠️"
+  );
+}
+
+// ===========================================
+// ☠️ PIRATE & 🏴‍☠️ PIRATE OF THE DAY
+// ===========================================
+
+if (type === "pirate") {
+  const cfg = piracy.pirate;
+  value = generateValue(seed, type, cfg.max, cfg.min, sender);
+  const space = spaceIf(cfg.unitSpace);
+
+  if (value === 100 && !aspectsOfTheDay.pirate[today]) {
+    aspectsOfTheDay.pirate[today] = { user: sender, value };
+    message = `🏴‍☠️ Ahoy ${senderDisplay}! ☠️ Your Pirate Level be at a mighty 100%! ⚓️ You are the *Pirate of the Day*! 🏆🍻`;
+  } else {
+    message = `🏴‍☠️ ${senderDisplay}, your Pirate Level be ${value}${space}% today! 🦜${getJoke(req, type, value)} Arrr!`;
+  }
+
+  // Track usage
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+  return res.send(message);
+}
+
+if (type === "pirateofday") {
+  const winner = aspectsOfTheDay.pirate[today];
+  return res.send(
+    winner
+      ? `🏴‍☠️☠️ The Pirate of the Day be ${formatDisplayName(winner.user)}! ⚓️ May the seas bow before ye! 🌊`
+      : "☠️ There be no Pirate of the Day yet! Raise yer sails and earn yer title, ye scallywag! 🦜"
+  );
+}
+
+// ===========================================
 // 🍆 PP & PP OF THE DAY
 // ===========================================
 
@@ -876,33 +1619,49 @@ winner
 // ===========================================
 
 if (type === "bb") {
-const cfg = stats.bb;
-const bandIndex = generateValue(seed, type + "_band", cfg.bands.length - 1, 0, sender);
-const cupIndex = generateValue(seed, type + "_cup", cfg.cups.length - 1, 0, sender);
-const band = cfg.bands[bandIndex];
-const cup = cfg.cups[cupIndex];
-const size = `${band}${cup}`;
+  const cfg = stats.bb;
+  
+  // Generate random band & cup indices
+  const bandIndex = generateValue(seed, type + "_band", cfg.bands.length - 1, 0, sender);
+  const cupIndex = generateValue(seed, type + "_cup", cfg.cups.length - 1, 0, sender);
+  const band = cfg.bands[bandIndex];
+  const cup = cfg.cups[cupIndex];
+  const size = `${band}${cup}`;
 
-if (cup === "DD" && !aspectsOfTheDay.bb[today]) {
-aspectsOfTheDay.bb[today] = { user: sender, size };
-message = `${senderDisplay}, your size is ${size} today! 🎀 You are the Boob of the Day!`;
-} else {
-message = `${senderDisplay}, your boob size is ${size} today!${getJoke(req, type, bandIndex)}`;
-}
+  // Map cups to numeric weights for joke scaling
+  const cupWeights = { A: 1, B: 2, C: 3, D: 4, DD: 5, E: 6, F: 7 };
+  const numericSize = band + (cupWeights[cup] || 0) * 2; // multiplier adjusts scaling
 
-statCounters[sender] = statCounters[sender] || {};
-statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
-commandCounters[type] = (commandCounters[type] || 0) + 1;
-return res.send(message);
+  // Universal joke cfg for bb
+  const jokeCfg = { 
+    min: cfg.bands[0] + (cupWeights[cfg.cups[0]] || 0) * 2, 
+    max: cfg.bands[cfg.bands.length - 1] + (cupWeights[cfg.cups[cfg.cups.length - 1]] || 0) * 2, 
+    levels: [35, 50] // scale for low/medium/high
+  };
+
+  // Boob of the Day: biggest size automatically wins
+  const biggestSize = `${cfg.bands[cfg.bands.length - 1]}${cfg.cups[cfg.cups.length - 1]}`; // 42F
+
+  if (size === biggestSize && !aspectsOfTheDay.bb[today]) {
+    aspectsOfTheDay.bb[today] = { user: sender, size };
+    message = `${senderDisplay}, your size is ${size} today! 🎀 You are the Boob of the Day!`;
+  } else {
+    message = `${senderDisplay}, your boob size is ${size} today!${getJoke(req, type, numericSize, jokeCfg)}`;
+  }
+
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+  return res.send(message);
 }
 
 if (type === "bbofday") {
-const winner = aspectsOfTheDay.bb[today];
-return res.send(
-winner
-? `👑 The Boob of the Day is ${formatDisplayName(winner.user)} (${winner.size})!`
-: "There is no Boob of the Day yet!"
-);
+  const winner = aspectsOfTheDay.bb[today];
+  return res.send(
+    winner
+      ? `👑 The Boob of the Day is ${formatDisplayName(winner.user)} (${winner.size})!`
+      : "There is no Boob of the Day yet!"
+  );
 }
 
 // ===========================================
@@ -910,15 +1669,15 @@ winner
 // ===========================================
 
 if (type === "daddy") {
-const cfg = personality.daddy;
+const cfg = stats.daddy;
 value = generateValue(seed, type, cfg.max, cfg.min, sender);
 const space = spaceIf(cfg.unitSpace);
 
 if (value === 100 && !aspectsOfTheDay.daddy[today]) {
 aspectsOfTheDay.daddy[today] = { user: sender, value };
-message = `${senderDisplay}, your Daddy value is 100%! 🎉 You are the Daddy of the Day!`;
+message = `${senderDisplay}, your Daddy Level is 100%! 🎉 You are the Daddy of the Day!`;
 } else {
-message = `${senderDisplay}, your Daddy value is ${value}${space}% today!${getJoke(req, type, value)}`;
+message = `${senderDisplay}, your Daddy Level is ${value}${space}% today!${getJoke(req, type, value)}`;
 }
 
 statCounters[sender] = statCounters[sender] || {};
@@ -937,11 +1696,73 @@ winner
 }
 
 // ===========================================
+// 🧔 CAT MOM & CAT MOM OF THE DAY
+// ===========================================
+
+if (type === "catmom") {
+const cfg = stats.catmom;
+value = generateValue(seed, type, cfg.max, cfg.min, sender);
+const space = spaceIf(cfg.unitSpace);
+
+if (value === 100 && !aspectsOfTheDay.catmom[today]) {
+aspectsOfTheDay.catmom[today] = { user: sender, value };
+message = `${senderDisplay}, your Cat Mom Level is 100%! 🎉 You are the Cat Mom of the Day!`;
+} else {
+message = `${senderDisplay}, your Cat Mom Level is ${value}${space}% today!${getJoke(req, type, value)}`;
+}
+
+statCounters[sender] = statCounters[sender] || {};
+statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+commandCounters[type] = (commandCounters[type] || 0) + 1;
+return res.send(message);
+}
+
+if (type === "catmomofday") {
+const winner = aspectsOfTheDay.catmom[today];
+return res.send(
+winner
+? `🦸‍♂️ The Cat Mom of the Day is ${formatDisplayName(winner.user)}!`
+: "There is no Cat Mom of the Day yet!"
+);
+}
+
+// ===========================================
+// 🧔 STINKER & STINKER OF THE DAY
+// ===========================================
+
+if (type === "stinker") {
+const cfg = stats.stinker;
+value = generateValue(seed, type, cfg.max, cfg.min, sender);
+const space = spaceIf(cfg.unitSpace);
+
+if (value === 100 && !aspectsOfTheDay.stinker[today]) {
+aspectsOfTheDay.stinker[today] = { user: sender, value };
+message = `${senderDisplay}, your Fart Level is 100%! 🎉 You are the Stinker of the Day!`;
+} else {
+message = `${senderDisplay}, your Fart Level is ${value}${space}% today!${getJoke(req, type, value)}`;
+}
+
+statCounters[sender] = statCounters[sender] || {};
+statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+commandCounters[type] = (commandCounters[type] || 0) + 1;
+return res.send(message);
+}
+
+if (type === "stinkerofday") {
+const winner = aspectsOfTheDay.stinker[today];
+return res.send(
+winner
+? `🦸‍♂️ The Stinker of the Day is ${formatDisplayName(winner.user)}!`
+: "There is no Stinker of the Day yet!"
+);
+}
+
+// ===========================================
 // 👑 PRINCESS & PRINCESS OF THE DAY
 // ===========================================
 
 if (type === "princess") {
-const cfg = personality.princess;
+const cfg = stats.princess;
 value = generateValue(seed, type, cfg.max, cfg.min, sender);
 value = Math.round(value);
 const space = spaceIf(cfg.unitSpace);
@@ -949,9 +1770,9 @@ const space = spaceIf(cfg.unitSpace);
 // Only assign Princess of the Day if value is 100 and not already set
 if (value === 100 && !aspectsOfTheDay.princess[today]) {
 aspectsOfTheDay.princess[today] = { user: sender, value };
-message = `${senderDisplay}, your Princess rating is ${value}${space}% today! 👑 You are the Princess of the Day! 🎉`;
+message = `${senderDisplay}, your Princess Level is ${value}${space}% today! 👑 You are the Princess of the Day! 🎉`;
 } else {
-message = `${senderDisplay}, your Princess rating is ${value}${space}% today!${getJoke(req, type, value)}`;
+message = `${senderDisplay}, your Princess Level is ${value}${space}% today!${getJoke(req, type, value)}`;
 }
 
 statCounters[sender] = statCounters[sender] || {};
@@ -975,7 +1796,7 @@ winner
 // ===========================================
 
 if (type === "goodgirl") {
-const cfg = personality.goodgirl;
+const cfg = stats.goodgirl;
 value = generateValue(seed, type, cfg.max, cfg.min, sender);
 value = Math.round(value);
 const space = spaceIf(cfg.unitSpace);
@@ -983,9 +1804,9 @@ const space = spaceIf(cfg.unitSpace);
 // Only assign Good Girl of the Day if value is 100 and not already set
 if (value === 100 && !aspectsOfTheDay.goodgirl[today]) {
 aspectsOfTheDay.goodgirl[today] = { user: sender, value };
-message = `${senderDisplay}, your Good Girl rating is ${value}${space}% today! 🐶 You are the Good Girl of the Day! 🎉`;
+message = `${senderDisplay}, your Good Girl Level is ${value}${space}% today! 🐶 You are the Good Girl of the Day! 🎉`;
 } else {
-message = `${senderDisplay}, your Good Girl rating is ${value}${space}% today!${getJoke(req, type, value)}`;
+message = `${senderDisplay}, your Good Girl Level is ${value}${space}% today!${getJoke(req, type, value)}`;
 }
 
 statCounters[sender] = statCounters[sender] || {};
@@ -1005,6 +1826,277 @@ winner
 }
 
 // ===========================================
+// 🐾 ANIMAL & ANIMAL OF THE DAY
+// ===========================================
+
+if (type === "animal") {
+  const cfg = animal.animal;
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.animal[index];
+
+  if (!aspectsOfTheDay.animal) aspectsOfTheDay.animal = {};
+
+  if (chosen.toLowerCase().includes("unicorn") && !aspectsOfTheDay.animal[today]) {
+    aspectsOfTheDay.animal[today] = { user: sender, chosen };
+    message = `🐾 ${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke} 🏆 You are the *Animal of the Day!* 🎉`;
+  } else if (aspectsOfTheDay.animal[today]?.user === sender) {
+    message = `🐾 ${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke} 👑 You’re still reigning *Animal of the Day!*`;
+  } else {
+    message = `🐾 ${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  }
+
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+if (type === "animalofday") {
+  const winner = aspectsOfTheDay.animal?.[today];
+  return res.send(
+    winner
+      ? `🐾 The Animal of the Day is ${formatDisplayName(winner.user)} — a majestic ${winner.chosen}! 👑`
+      : "🐾 There is no Animal of the Day yet! Be the first to roar! 🦁"
+  );
+}
+
+// ===========================================
+// 🍹 DRINK & DRINK OF THE DAY
+// ===========================================
+if (type === "drink") {
+  const cfg = drink.drink;
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.drink[index];
+
+  if (!aspectsOfTheDay.drink) aspectsOfTheDay.drink = {};
+
+  if (chosen.toLowerCase().includes("🍸 martini") && !aspectsOfTheDay.drink[today]) {
+    aspectsOfTheDay.drink[today] = { user: sender, chosen };
+    message = `🍹 ${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke} 🏆 You are the *Drink of the Day!* 🎉`;
+  } else if (aspectsOfTheDay.drink[today]?.user === sender) {
+    message = `🍹 ${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke} 👑 You’re still reigning *Drink of the Day!*`;
+  } else {
+    message = `🍹 ${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  }
+
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+if (type === "drinkoofday") {
+  const winner = aspectsOfTheDay.drink?.[today];
+  return res.send(
+    winner
+      ? `🍹 The Drink of the Day is ${formatDisplayName(winner.user)} — ${winner.chosen}! 🏆`
+      : "🍹 There is no Drink of the Day yet! Be the first to sip! 🍸"
+  );
+}
+
+// ===========================================
+// 🎨 COLORS
+// ===========================================
+
+if (colors[type]) {
+  const cfg = colors[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.colors?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// 🧘 AURA VIBES
+// ===========================================
+
+if (auravibes[type]) {
+  const cfg = auravibes[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.auravibes?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// 🏴 PIRATE VIBES
+// ===========================================
+
+if (piratevibes[type]) {
+  const cfg = piratevibes[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.piratevibes?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// 🧙 WIZARD VIBES
+// ===========================================
+
+if (wizardvibes[type]) {
+  const cfg = wizardvibes[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.wizard?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// 👗 DAILY OUTFIT / STYLE
+// ===========================================
+
+if (outfits[type]) {
+  const cfg = outfits[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.outfits?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// ⚡ ELEMENTAL AFFINITY
+// ===========================================
+
+if (elements[type]) {
+  const cfg = elements[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.elements?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// ⚡ DAILY POWER / ABILITY
+// ===========================================
+
+if (powers[type]) {
+  const cfg = powers[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.powers?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// 🏴 PIRATE ACCESSORIES
+// ===========================================
+
+if (pirateoutfits[type]) {
+  const cfg = pirateoutfits[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.pirateoutfits?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// 🧙 WIZARD ITEMS
+// ===========================================
+
+if (wizarditems[type]) {
+  const cfg = wizarditems[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.wizarditems?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// 🌟 ELEMENTAL ITEMS
+// ===========================================
+
+if (elementalitems[type]) {
+  const cfg = elementalitems[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.elementalitems?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
+// 🧘 AURA ACCESSORIES
+// ===========================================
+
+if (auraitems[type]) {
+  const cfg = auraitems[type];
+  const index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  const chosen = cfg.list[index];
+  const joke = jokes.auraitems?.[index] || "";
+
+  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
+}
+
+// ===========================================
 // 📊 STATS
 // ===========================================
 
@@ -1013,6 +2105,7 @@ const cfg = stats[type];
 value = generateValue(seed, type, cfg.max, cfg.min, sender);
 const space = spaceIf(cfg.unitSpace);
 message = `${senderDisplay}, your ${cfg.label} is ${value}${space}${cfg.unit} today!${getJoke(req, type, value)}`;
+
 statCounters[sender] = statCounters[sender] || {};
 statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
 commandCounters[type] = (commandCounters[type] || 0) + 1;
@@ -1140,34 +2233,89 @@ return res.send(message);
 }
 
 // ===========================================
-// 🤝 INTERACTIONS
+// ✋ CARRY
 // ===========================================
 
-if (interactions.includes(type)) {
-value = generateValue(seed, type, 100, 1, sender);
-const actionWord = type
-.replace("throwshoe", "threw a shoe at")
-.replace("fliptable", "flipped a table")
-.replace("highfive", "high-fived")
-.replace("love", "sent love to")
-.replace("bonk", "bonked")
-.replace("boop", "booped")
-.replace("hug", "hugged")
-.replace("kiss", "kissed")
-.replace("pat", "patted")
-.replace("slap", "slapped")
-.replace("spank", "spanked");
-
-if (!userRaw || sender === cleanUsername(userRaw)) {
-message = `${senderDisplay} tried to ${type} the air with ${value}% power!${getJoke(req, type, value)}`;
-} else {
-message = `${senderDisplay} ${actionWord} ${targetDisplay} with ${value}% power!${getJoke(req, type, value)}`;
-}
-
+if (carry[type]) {
+const cfg = carry[type];
+value = generateValue(seed, type, cfg.max, cfg.min, sender);
+const space = spaceIf(cfg.unitSpace);
+message = `${senderDisplay}, your ${cfg.label} is carrying ${value}${space}${cfg.unit} today!${getJoke(req, type, value)}`;
 statCounters[sender] = statCounters[sender] || {};
 statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
 commandCounters[type] = (commandCounters[type] || 0) + 1;
 return res.send(message);
+}
+
+// ===========================================
+// ✋ PIRACY
+// ===========================================
+
+if (piracy[type]) {
+const cfg = piracy[type];
+value = generateValue(seed, type, cfg.max, cfg.min, sender);
+const space = spaceIf(cfg.unitSpace);
+message = `${senderDisplay}, your ${cfg.label} be ${value}${space}${cfg.unit} today!${getJoke(req, type, value)}`;
+statCounters[sender] = statCounters[sender] || {};
+statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+commandCounters[type] = (commandCounters[type] || 0) + 1;
+return res.send(message);
+}
+
+// ===========================================
+// ✋ CUSTOM - Small blocks for custom message outcomes that are outside the general stat blocks
+// ===========================================
+
+if (custombutt[type]) {
+const cfg = custombutt[type];
+value = generateValue(seed, type, cfg.max, cfg.min, sender);
+const space = spaceIf(cfg.unitSpace);
+message = `${senderDisplay}, your ${cfg.label} is ${value}${space}${cfg.unit} fruity today!${getJoke(req, type, value)}`;
+statCounters[sender] = statCounters[sender] || {};
+statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+commandCounters[type] = (commandCounters[type] || 0) + 1;
+return res.send(message);
+}
+
+// ===========================================
+// 🤝 INTERACTIONS
+// ===========================================
+
+if (interactions.includes(type)) {
+  // Map action words for messaging
+  const actionWord = type
+    .replace("throwshoe", "threw a shoe at")
+    .replace("fliptable", "flipped a table")
+    .replace("highfive", "high-fived")
+    .replace("love", "sent love to")
+    .replace("bonk", "bonked")
+    .replace("boop", "booped")
+    .replace("hug", "hugged")
+    .replace("kiss", "kissed")
+    .replace("pat", "patted")
+    .replace("slap", "slapped")
+    .replace("spank", "spanked");
+
+  // Generate a random power value 1-100%
+  const value = generateValue(seed, type, 100, 1, sender);
+
+  // Use the universal getJoke with a tempCfg for interactions
+  const tempCfg = { min: 1, max: 100, levels: [30, 70] };
+  const joke = getJoke(req, type, value, tempCfg);
+
+  // Compose the message depending on target
+  if (!userRaw || sender === cleanUsername(userRaw)) {
+    message = `${senderDisplay} tried to ${type} the air with ${value}% power!${joke}`;
+  } else {
+    message = `${senderDisplay} ${actionWord} ${targetDisplay} with ${value}% power!${joke}`;
+  }
+
+  // Update stats
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+
+  return res.send(message);
 }
 
 // ===========================================
@@ -1195,6 +2343,3 @@ res.send("");
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Daily Stat API running on port ${port}`));
-
-
-
