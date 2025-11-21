@@ -814,6 +814,14 @@ For each command your link will look like this
 &type=auraitems
 ```
 ```yaml
+These require targeted links such as 
+
+${customapi.https://yourusername.onrender.com?sender=${sender}&user=${user}&type=bonk}
+
+If you wish to use the consent system, change it to the following
+
+${customapi.https://yourusername.onrender.com?sender=${sender}&user=${user}&type=bonk&consent=true}
+
 # 🤝 Interactions
 &type=bonk
 &type=boop
