@@ -8,7 +8,7 @@ const TIMEZONE = "Europe/London";
 // ⚙️ CONSENT TIMER
 // ===========================================
 
-const CONSENT_TIMEOUT_MS = 60000;
+const CONSENT_TIMEOUT_MS = 60000; // 60s
 
 // ===========================================
 // 💾 TEMP CONSENT STORAGE
@@ -2050,6 +2050,8 @@ const dailyConsents = {};
 const lock = {};
 const statCounters = {};
 const commandCounters = {};
+const giveawayEntries = [];    
+const giveawayWinners = [];
 
 // ===========================================
 // 🚫 ASPEECT OF THE DAY TRIGGER VALUES - NONE LIST ITEMS
@@ -2223,17 +2225,178 @@ const today = new Date().toLocaleDateString("en-GB");
 if (specialUsers[sender] && specialUsers[sender][type])
 return res.send(specialUsers[sender][type]);
 
-if (!lock[type]) lock[type] = false;
-if (lock[type])
-return res.send(
-`Please wait a moment, ${type} of the Day is being updated.`
-);
+const isAspectType =
+  aspectsOfTheDay[type] !== undefined ||
+  listAspectTriggers[type] !== undefined;
 
-lock[type] = true;
+if (isAspectType) {
+  if (!lock[type]) lock[type] = false;
+  if (lock[type]) {
+    return res.send(`Please wait a moment, ${type} of the Day is being updated.`);
+  }
+  lock[type] = true;
+}
+
 try {
 const seed = `${today}-${type}-${sender}-${target}`;
 let value,
 message = "";
+
+// ======================================================
+// 🎁 FULL GIVEAWAY SYSTEM
+// ======================================================
+
+const blockedBots = ["streamelements", "nightbot", "moobot", "streamlabs"];
+
+if (
+  type === "giveaway" ||
+  type === "giveawayroll" ||
+  type === "giveawayreroll" ||
+  type === "giveawaylist" ||
+  type === "giveawaycount" ||
+  type === "giveawayremove" ||
+  type === "giveawayclear" ||
+  type === "giveawaywinners"
+) {
+
+  // -------------------------------
+  // 🎁 ENTER GIVEAWAY
+  // -------------------------------
+
+  if (type === "giveaway") {
+    if (blockedBots.includes(sender)) {
+      return res.send(`🤖 Bots cannot enter the giveaway.`);
+    }
+
+    const exists = giveawayEntries.find(e => e.user === sender);
+    if (exists) {
+      return res.send(`🎁 ${senderDisplay}, you are already entered in the giveaway!`);
+    }
+
+    giveawayEntries.push({
+      user: sender,
+      displayName: senderDisplay,
+      timestamp: new Date()
+    });
+
+    return res.send(`🎁 ${senderDisplay} has entered the giveaway! Good luck! 🍀`);
+  }
+
+  // -------------------------------
+  // 🎲 ROLL WINNER (does NOT clear entries)
+  // -------------------------------
+
+  if (type === "giveawayroll") {
+    if (!giveawayEntries.length) {
+      return res.send("😢 There are no giveaway entries yet!");
+    }
+
+    const winner =
+      giveawayEntries[Math.floor(Math.random() * giveawayEntries.length)];
+
+    giveawayWinners.push({
+      user: winner.user,
+      displayName: winner.displayName,
+      prize: "Giveaway",
+      timestamp: new Date()
+    });
+
+    return res.send(`🏆 Giveaway winner: ${winner.displayName}! 🎉`);
+  }
+
+  // -------------------------------
+  // 🔁 REROLL WINNER (entries stay)
+  // -------------------------------
+
+  if (type === "giveawayreroll") {
+    if (!giveawayEntries.length) {
+      return res.send("😢 There are no giveaway entries to reroll!");
+    }
+
+    const winner =
+      giveawayEntries[Math.floor(Math.random() * giveawayEntries.length)];
+
+    giveawayWinners.push({
+      user: winner.user,
+      displayName: winner.displayName,
+      prize: "Giveaway (Reroll)",
+      timestamp: new Date()
+    });
+
+    return res.send(`🔁 Reroll winner: ${winner.displayName}! 🎉`);
+  }
+
+  // -------------------------------
+  // 📜 LIST ENTRIES
+  // -------------------------------
+
+  if (type === "giveawaylist") {
+    if (!giveawayEntries.length) {
+      return res.send("📭 No one has entered the giveaway yet!");
+    }
+
+    const list = giveawayEntries
+      .map((e, i) => `${i + 1}. ${e.displayName}`)
+      .join(" | ");
+
+    return res.send(`🎟️ Giveaway Entries (${giveawayEntries.length}): ${list}`);
+  }
+
+  // -------------------------------
+  // 🔢 COUNT ENTRIES
+  // -------------------------------
+
+  if (type === "giveawaycount") {
+    return res.send(`🎟️ There are currently ${giveawayEntries.length} giveaway entries.`);
+  }
+
+  // -------------------------------
+  // ❌ REMOVE SOMEONE
+  // -------------------------------
+
+  if (type === "giveawayremove") {
+    if (!userRaw) return res.send("⚠️ Please specify a user to remove.");
+
+    const removeUser = cleanUsername(userRaw);
+    const index = giveawayEntries.findIndex(e => e.user === removeUser);
+
+    if (index === -1) {
+      return res.send(`⚠️ @${removeUser} is not in the giveaway.`);
+    }
+
+    giveawayEntries.splice(index, 1);
+    return res.send(`🗑️ @${removeUser} has been removed from the giveaway.`);
+  }
+
+  // -------------------------------
+  // 🧹 CLEAR ENTRIES
+  // -------------------------------
+
+  if (type === "giveawayclear") {
+    giveawayEntries.length = 0;
+    return res.send("🧹 Giveaway entries have been cleared.");
+  }
+
+  // -------------------------------
+  // 🏅 SHOW RECENT WINNERS
+  // -------------------------------
+
+  if (type === "giveawaywinners") {
+    if (!giveawayWinners.length) {
+      return res.send("📜 There are no recorded giveaway winners yet!");
+    }
+
+    const recent = giveawayWinners.slice(-5).reverse();
+
+    const list = recent
+      .map((w, i) => `${i + 1}. ${w.displayName}`)
+      .join(" | ");
+
+    return res.send(`🏅 Recent giveaway winners: ${list}`);
+  }
+
+  return;
+}
 
 // ===========================================
 // 🤝 INTERACTIONS (with optional consent system + daily consent memory)
@@ -2860,8 +3023,14 @@ return res.send(message);
 
 message = `${senderDisplay}, invalid type. Try pp, daddy, bb, or fun ones like beard, hug, boop, bonk, etc.`;
 return res.send(message);
+
 } finally {
-lock[type] = false;
+  if (
+    aspectsOfTheDay[type] !== undefined ||
+    listAspectTriggers[type] !== undefined
+  ) {
+    lock[type] = false;
+  }
 }
 });
 
