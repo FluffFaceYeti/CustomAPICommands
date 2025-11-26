@@ -731,7 +731,7 @@ ${customapi.https://yourusername.onrender.com?sender=${sender}&user=${user}&type
 ${customapi.https://yourusername.onrender.com?sender=${sender}&type=giveawayclear} - Clears The Giveaway - Suggested MOD only!
 ```
 ```yaml
-${customapi.https://yourusername.onrender.com?sender=${sender}&type=giveawaygiveawaywinnersclear} - Shows The Winners - Suggested MOD only!
+${customapi.https://yourusername.onrender.com?sender=${sender}&type=giveawaywinners} - Shows The Winners - Suggested MOD only!
 ```
 
 ----------------------------------------------------
