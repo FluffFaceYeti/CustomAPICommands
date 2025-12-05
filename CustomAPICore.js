@@ -481,6 +481,79 @@ parley:           { min: 0, max: 100, levels: [30,70], unit: "%", label: "Your P
 };
 
 // ===========================================
+// 🐟 FISH
+// ===========================================
+
+const fish = {
+  fish: {
+    list: [
+      // COMMON
+      "🐟 Ruby Splashtail",
+      "🐟 Charcoal Pondie",
+      "🐟 Stone Islehopper",
+      "🐟 Almond Ancientscale",
+      "🐟 Olive Plentifin",
+      "🐟 Russet Wildsplash",
+      "🐟 Ashen Devilfish",
+      "🐟 Jade Battlegill",
+      "🐟 Rose Wrecker",
+
+      // UNCOMMON
+      "🐟 Sunny Splashtail",
+      "🐟 Orchid Pondie",
+      "🐟 Moss Islehopper",
+      "🐟 Sapphire Ancientscale",
+      "🐟 Amber Plentifin",
+      "🐟 Sandy Wildsplash",
+      "🐟 Seashell Devilfish",
+      "🐟 Sky Battlegill",
+      "🐟 Sun Wrecker",
+
+      // RARE
+      "🐟 Indigo Splashtail",
+      "🐟 Bronze Pondie",
+      "🐟 Honey Islehopper",
+      "🐟 Smoke Ancientscale",
+      "🐟 Cloudy Plentifin",
+      "🐟 Ocean Wildsplash",
+      "🐟 Lavenderbeard Devilfish",
+      "🐟 Rum Battlegill",
+      "🐟 Moon Wrecker",
+
+      // NIGHT
+      "🐟 Umber Splashtail",
+      "🐟 Bright Pondie",
+      "🐟 Raven Islehopper",
+      "🐟 Bone Ancientscale",
+      "🐟 Bonedust Plentifin",
+      "🐟 Coral Wildsplash",
+      "🐟 Lavenderbeard Devilfish (Night)",
+      "🐟 Bittersweet Battlegill",
+      "🐟 Blackcloud Wrecker",
+
+      // SPECIAL
+      "🐟 Seafoam Splashtail",
+      "🐟 Moonsky Pondie",
+      "🐟 Amethyst Islehopper",
+      "🐟 Starshine Ancientscale",
+      "🐟 Watery Plentifin",
+      "🐟 Muddy Wildsplash",
+      "🐟 Firelight Devilfish",
+      "🐟 Snow Wrecker",
+      "🐟 Wild Stormfish",
+
+      // LEGENDARY
+      "🐟 Forsaken Devilfish",
+      "🐟 Ancient Stormfish",
+      "🐟 Shores Stormfish",
+      "🐟 Shadow Stormfish",
+      "🐟 Twighlight Stormfish"
+    ],
+    label: "Fish"
+  }
+};
+
+// ===========================================
 // 🐾 ANIMAL VIBES
 // ===========================================
 
@@ -686,6 +759,7 @@ const interactions = [
 // ===========================================
 
 const jokes = {
+fish: ["In memory of our dear Toran who loved to fish 🎆"],
   animal: [
     "You’re feeling regal and mighty today! 🦁",
     "Ferocious energy surging through you! 🐯",
@@ -2738,19 +2812,20 @@ return res.send(builder(winner));
 // ===========================================
 
 const listGroups = [
-{ map: colors, jokesKey: "colors" },
-{ map: auravibes, jokesKey: "auravibes" },
-{ map: piratevibes, jokesKey: "piratevibes" },
-{ map: wizardvibes, jokesKey: "wizard" },
-{ map: outfits, jokesKey: "outfits" },
-{ map: elements, jokesKey: "elements" },
-{ map: powers, jokesKey: "powers" },
-{ map: pirateoutfits, jokesKey: "pirateoutfits" },
-{ map: wizarditems, jokesKey: "wizarditems" },
-{ map: elementalitems, jokesKey: "elementalitems" },
-{ map: auraitems, jokesKey: "auraitems" },
-{ map: animal, jokesKey: "animal" },
-{ map: drink, jokesKey: "drink" },
+  { map: colors, jokesKey: "colors" },
+  { map: auravibes, jokesKey: "auravibes" },
+  { map: piratevibes, jokesKey: "piratevibes" },
+  { map: wizardvibes, jokesKey: "wizard" },
+  { map: outfits, jokesKey: "outfits" },
+  { map: elements, jokesKey: "elements" },
+  { map: powers, jokesKey: "powers" },
+  { map: pirateoutfits, jokesKey: "pirateoutfits" },
+  { map: wizarditems, jokesKey: "wizarditems" },
+  { map: elementalitems, jokesKey: "elementalitems" },
+  { map: auraitems, jokesKey: "auraitems" },
+  { map: animal, jokesKey: "animal" },
+  { map: drink, jokesKey: "drink" },
+  { map: fish, jokesKey: "fish" }
 ];
 
 for (const { map, jokesKey } of listGroups) {
@@ -2799,6 +2874,15 @@ chosen = cfg.list[index];
 }
 }
 
+if (type === "fish") {
+  const tribute = jokes.fish[0]; 
+  message = `${senderDisplay}, you caught a ${chosen}! ${tribute}`;
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
+  return res.send(message);
+}
+
 message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
 
 statCounters[sender] = statCounters[sender] || {};
@@ -2808,6 +2892,7 @@ commandCounters[type] = (commandCounters[type] || 0) + 1;
 return res.send(message);
 }
 }
+
 // ===========================================
 // 🔢 GENERIC NUMERIC-BASED HANDLER
 // ===========================================
