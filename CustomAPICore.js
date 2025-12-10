@@ -117,6 +117,15 @@ function inchesToCm(inches) {
 }
 
 // ===========================================
+// 🏅 Rank Emojis for Leaderboards
+// ===========================================
+
+const rankEmoji = (i) => {
+  const emojis = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
+  return emojis[i] || `${i + 1}.`;
+};
+
+// ===========================================
 // 🌟 MINI GAMES
 // ===========================================
 
@@ -759,7 +768,7 @@ const interactions = [
 // ===========================================
 
 const jokes = {
-fish: ["In memory of our dear Toran who loved to fish 🎆"],
+  fish: ["In memory of our dear Toran who loved to fish 🎆"],
   animal: [
     "You’re feeling regal and mighty today! 🦁",
     "Ferocious energy surging through you! 🐯",
@@ -2126,6 +2135,8 @@ const statCounters = {};
 const commandCounters = {};
 const giveawayEntries = [];    
 const giveawayWinners = [];
+let interactionStats = {};
+let interactionStatsDate = "";
 
 // ===========================================
 // 🚫 ASPEECT OF THE DAY TRIGGER VALUES - NONE LIST ITEMS
@@ -2286,35 +2297,80 @@ hugs: { label: "hugs" },
 // 🧠 MAIN CODE
 // ===========================================
 
-app.get("/", (req, res) => {
-const senderRaw = req.query.sender || req.query.user || "someone";
-const userRaw = req.query.user || "";
-const type = (req.query.type || "beard").toLowerCase();
-const sender = cleanUsername(senderRaw);
-const senderDisplay = formatDisplayName(senderRaw);
-const targetDisplay = formatDisplayName(userRaw);
-const target = cleanUsername(userRaw) || sender;
-const today = new Date().toLocaleDateString("en-GB");
+function recordInteraction(sender, target, type) {
+  if (!interactionStats[target]) interactionStats[target] = {};
+  if (!interactionStats[target]._from) interactionStats[target]._from = {};
+  if (!interactionStats[target]._from[sender]) interactionStats[target]._from[sender] = {};
 
-if (specialUsers[sender] && specialUsers[sender][type])
-return res.send(specialUsers[sender][type]);
+  interactionStats[target][type] = (interactionStats[target][type] || 0) + 1;
+  interactionStats[target]._from[sender][type] =
+    (interactionStats[target]._from[sender][type] || 0) + 1;
 
-const isAspectType =
-  aspectsOfTheDay[type] !== undefined ||
-  listAspectTriggers[type] !== undefined;
-
-if (isAspectType) {
-  if (!lock[type]) lock[type] = false;
-  if (lock[type]) {
-    return res.send(`Please wait a moment, ${type} of the Day is being updated.`);
-  }
-  lock[type] = true;
+  // Also record global counters
+  statCounters[sender] = statCounters[sender] || {};
+  statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  commandCounters[type] = (commandCounters[type] || 0) + 1;
 }
 
-try {
-const seed = `${today}-${type}-${sender}-${target}`;
-let value,
-message = "";
+app.get("/", (req, res) => {
+
+  // ===================================================
+  // 🔧 Basic request parsing
+  // ===================================================
+
+  const senderRaw = req.query.sender || req.query.user || "someone";
+  const userRaw = req.query.user || "";
+  const type = (req.query.type || "beard").toLowerCase();
+  const sender = cleanUsername(senderRaw);
+  const senderDisplay = formatDisplayName(senderRaw);
+  const targetDisplay = formatDisplayName(userRaw);
+  const target = cleanUsername(userRaw) || sender;
+  const today = new Date().toLocaleDateString("en-GB");
+
+  // ===================================================
+  // 🔧 Universal argument parser
+  //   Supports: ?text=, ?arg=, ?arg1=, ?interaction=
+  // ===================================================
+
+  const text = (req.query.text || "").trim();
+  const parts = text.split(" ").filter(Boolean);
+  const args = parts.slice(1);  // everything after the command
+
+  if (args.length === 0) {
+    if (req.query.arg) args.push(req.query.arg);
+    if (req.query.arg1) args.push(req.query.arg1);
+    if (req.query.args) args.push(req.query.args);
+    if (req.query.interaction) args.push(req.query.interaction);
+  }
+
+  // ===================================================
+  // USER-SPECIFIC OVERRIDES
+  // ===================================================
+
+  if (specialUsers[sender] && specialUsers[sender][type]) {
+    return res.send(specialUsers[sender][type]);
+  }
+
+  // ===================================================
+  // ASPECTS OF THE DAY (thread locking)
+  // ===================================================
+
+  const isAspectType =
+    aspectsOfTheDay[type] !== undefined ||
+    listAspectTriggers[type] !== undefined;
+
+  if (isAspectType) {
+    if (!lock[type]) lock[type] = false;
+    if (lock[type]) {
+      return res.send(`Please wait a moment, ${type} of the Day is being updated.`);
+    }
+    lock[type] = true;
+  }
+
+  try {
+    const seed = `${today}-${type}-${sender}-${target}`;
+    let value,
+      message = "";
 
 // ======================================================
 // 🎁 FULL GIVEAWAY SYSTEM
@@ -2473,184 +2529,197 @@ if (
 }
 
 // ===========================================
-// 🤝 INTERACTIONS (with optional consent system + daily consent memory)
+// 🤝 INTERACTIONS (consent system + daily stats)
 // ===========================================
 
 if (interactions.includes(type) || type === "accept" || type === "deny") {
-const requireConsent = req.query.consent === "true";
-const today = new Date().toLocaleDateString("en-GB");
 
-if (type === "accept") {
-const pending = Array.from(pendingConsents.entries()).find(
-  ([key, v]) => v.target === sender
-);
+  const requireConsent = req.query.consent === "true";
+  const today = new Date().toLocaleDateString("en-GB");
 
-if (!pending) {
-  return res.send(`${senderDisplay}, there is nothing to accept.`);
-}
+  // ===========================================
+  // 🔄 DAILY RESET OF INTERACTION STATS
+  // ===========================================
+  if (interactionStatsDate !== today) {
+    interactionStats = {};
+    interactionStatsDate = today;
+  }
 
-const [targetKey, info] = pending;
-clearTimeout(info.timeout);
-pendingConsents.delete(targetKey);
+  // ===========================================
+  // ✔ ACCEPT (target approves request)
+  // ===========================================
 
-if (!dailyConsents[today]) dailyConsents[today] = {};
-if (!dailyConsents[today][sender]) dailyConsents[today][sender] = [];
-if (!dailyConsents[today][sender].includes(info.sender)) {
-  dailyConsents[today][sender].push(info.sender);
-}
+  if (type === "accept") {
+    const pending = Array.from(pendingConsents.entries()).find(
+      ([, v]) => v.target === sender
+    );
 
-const special =
-  specialInteractions[info.sender]?.[info.target]?.[info.type] ||
-  specialInteractions["anyone"]?.[info.target]?.[info.type] ||
-  specialInteractions[info.sender]?.["anyone"]?.[info.type] ||
-  null;
+    if (!pending) {
+      return res.send(`${senderDisplay}, there is nothing to accept.`);
+    }
 
-if (special) {
-  const forcedValue =
-    special.value !== undefined
-      ? special.value
-      : generateValue(
-          `${today}-${info.type}-${info.sender}-${info.target}`,
-          info.type,
-          100,
-          1,
-          info.sender
-        );
+    const [pendingKey, info] = pending;
+    clearTimeout(info.timeout);
+    pendingConsents.delete(pendingKey);
 
-  const reply = special.message
-    .replaceAll("@{sender}", formatDisplayName(info.sender))
-    .replaceAll("@{target}", formatDisplayName(info.target))
-    .replaceAll("{value}", forcedValue);
+    // Store daily consent
+    if (!dailyConsents[today]) dailyConsents[today] = {};
+    if (!dailyConsents[today][sender]) dailyConsents[today][sender] = [];
+    if (!dailyConsents[today][sender].includes(info.sender)) {
+      dailyConsents[today][sender].push(info.sender);
+    }
 
-  return res.send(reply);
-}
+    // Overrides
+    const special =
+      specialInteractions[info.sender]?.[info.target]?.[info.type] ||
+      specialInteractions["anyone"]?.[info.target]?.[info.type] ||
+      specialInteractions[info.sender]?.["anyone"]?.[info.type] ||
+      null;
 
-const interactionSeed = `${today}-${info.type}-${info.sender}-${info.target}`;
-const value = generateValue(
-  interactionSeed,
-  info.type,
-  100,
-  1,
-  info.sender
-);
+    if (special) {
+      const forcedValue =
+        special.value !== undefined
+          ? special.value
+          : generateValue(
+              `${today}-${info.type}-${info.sender}-${info.target}`,
+              info.type,
+              100,
+              1,
+              info.sender
+            );
 
-const tempCfg = { min: 1, max: 100, levels: [30, 70] };
-const joke = getJoke(req, info.type, value, tempCfg);
-const actionWord = getActionWord(info.type);
+      const message = special.message
+        .replaceAll("@{sender}", formatDisplayName(info.sender))
+        .replaceAll("@{target}", formatDisplayName(info.target))
+        .replaceAll("{value}", forcedValue);
 
-return res.send(
-  `${formatDisplayName(info.sender)} ${actionWord} ${formatDisplayName(
-    info.target
-  )} with ${value}% power!${joke}`
-);
-}
+      recordInteraction(info.sender, info.target, info.type);
+      return res.send(message);
+    }
 
-if (type === "deny") {
-const pending = Array.from(pendingConsents.entries()).find(
-  ([key, v]) => v.target === sender
-);
+    // Normal accept flow
+    const seed = `${today}-${info.type}-${info.sender}-${info.target}`;
+    const value = generateValue(seed, info.type, 100, 1, info.sender);
 
-if (!pending) {
-  return res.send(`${senderDisplay}, there is nothing to deny.`);
-}
+    const tempCfg = { min: 1, max: 100, levels: [30, 70] };
+    const joke = getJoke(req, info.type, value, tempCfg);
+    const actionWord = getActionWord(info.type);
 
-const [targetKey, info] = pending;
-clearTimeout(info.timeout);
-pendingConsents.delete(targetKey);
+    const message = `${formatDisplayName(info.sender)} ${actionWord} ${formatDisplayName(info.target)} with ${value}% power!${joke}`;
 
-return res.send(
-  `🍑 ${formatDisplayName(info.target)} denied your ${
-    info.type
-  }, ${formatDisplayName(info.sender)}!`
-);
-}
+    recordInteraction(info.sender, info.target, info.type);
+    return res.send(message);
+  }
 
-const actionWord = getActionWord(type);
+  // ===========================================
+  // ❌ DENY (target rejects request)
+  // ===========================================
 
-if (!userRaw || sender === cleanUsername(userRaw)) {
-return res.send(`${senderDisplay} tried to ${type} the air! 💨`);
-}
+  if (type === "deny") {
+    const pending = Array.from(pendingConsents.entries()).find(
+      ([, v]) => v.target === sender
+    );
 
-const alreadyApproved =
-dailyConsents[today]?.[target]?.includes(sender) || false;
+    if (!pending) {
+      return res.send(`${senderDisplay}, there is nothing to deny.`);
+    }
 
-if (requireConsent && !alreadyApproved) {
-if (pendingConsents.has(target)) {
-  return res.send(
-    `${targetDisplay} already has a pending consent request.`
-  );
-}
+    const [pendingKey, info] = pending;
+    clearTimeout(info.timeout);
+    pendingConsents.delete(pendingKey);
 
-const timeout = setTimeout(() => {
-  pendingConsents.delete(target);
-}, CONSENT_TIMEOUT_MS);
+    return res.send(
+      `🍑 ${formatDisplayName(info.target)} denied your ${info.type}, ${formatDisplayName(info.sender)}!`
+    );
+  }
 
-pendingConsents.set(target, { sender, target, type, timeout });
+  // ===========================================
+  // INTERACTION TRIGGERED
+  // ===========================================
 
-return res.send(
-  `🫱 ${senderDisplay} wants to ${type} ${targetDisplay}!\n` +
-    `${targetDisplay}, type !accept or !deny within ${
-      CONSENT_TIMEOUT_MS / 1000
-    } seconds.`
-);
-}
+  const actionWord = getActionWord(type);
 
-const override =
-specialInteractions[sender]?.[target]?.[type] ||
-specialInteractions["anyone"]?.[target]?.[type] ||
-specialInteractions[sender]?.["anyone"]?.[type] ||
-null;
+  if (!userRaw || sender === cleanUsername(userRaw)) {
+    return res.send(`${senderDisplay} tried to ${type} the air! 💨`);
+  }
 
-if (override) {
-const forcedValue =
-  override.value !== undefined
-    ? override.value
-    : generateValue(
-        `${today}-${type}-${sender}-${target}`,
-        type,
-        100,
-        1,
-        sender
-      );
+  const alreadyApproved =
+    dailyConsents[today]?.[target]?.includes(sender) || false;
 
-let reply;
+  // ===========================================
+  // CONSENT NEEDED → Ask first
+  // ===========================================
 
-if (override.message) {
-  reply = override.message
-    .replaceAll("@{sender}", senderDisplay)
-    .replaceAll("@{target}", targetDisplay)
-    .replaceAll("{value}", forcedValue);
-} else {
-  const joke = getJoke(req, type, forcedValue, {
-    min: 1,
-    max: 100,
-    levels: [30, 70],
-  });
-  reply = `${senderDisplay} ${actionWord} ${targetDisplay} with ${forcedValue}% power!${joke}`;
-}
+  if (requireConsent && !alreadyApproved) {
 
-statCounters[sender] = statCounters[sender] || {};
-statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+    if (pendingConsents.has(target)) {
+      return res.send(`${targetDisplay} already has a pending consent request.`);
+    }
 
-commandCounters[type] = (commandCounters[type] || 0) + 1;
+    const timeout = setTimeout(() => {
+      pendingConsents.delete(target);
+    }, CONSENT_TIMEOUT_MS);
 
-return res.send(reply);
-}
+    pendingConsents.set(target, { sender, target, type, timeout });
 
-const interactionSeed = `${today}-${type}-${sender}-${target}`;
-const value = generateValue(interactionSeed, type, 100, 1, sender);
+    return res.send(
+      `🫱 ${senderDisplay} wants to ${type} ${targetDisplay}!\n` +
+      `${targetDisplay}, type !accept or !deny within ${CONSENT_TIMEOUT_MS / 1000} seconds.`
+    );
+  }
 
-const tempCfg = { min: 1, max: 100, levels: [30, 70] };
-const joke = getJoke(req, type, value, tempCfg);
+  // ===========================================
+  // OVERRIDES
+  // ===========================================
 
-const msg = `${senderDisplay} ${actionWord} ${targetDisplay} with ${value}% power!${joke}`;
+  const override =
+    specialInteractions[sender]?.[target]?.[type] ||
+    specialInteractions["anyone"]?.[target]?.[type] ||
+    specialInteractions[sender]?.["anyone"]?.[type] ||
+    null;
 
-statCounters[sender] = statCounters[sender] || {};
-statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+  if (override) {
+    const forcedValue =
+      override.value !== undefined
+        ? override.value
+        : generateValue(
+            `${today}-${type}-${sender}-${target}`,
+            type,
+            100,
+            1,
+            sender
+          );
 
-commandCounters[type] = (commandCounters[type] || 0) + 1;
+    let message;
 
-return res.send(msg);
+    if (override.message) {
+      message = override.message
+        .replaceAll("@{sender}", senderDisplay)
+        .replaceAll("@{target}", targetDisplay)
+        .replaceAll("{value}", forcedValue);
+    } else {
+      const joke = getJoke(req, type, forcedValue, { min: 1, max: 100, levels: [30, 70] });
+      message = `${senderDisplay} ${actionWord} ${targetDisplay} with ${forcedValue}% power!${joke}`;
+    }
+
+    recordInteraction(sender, target, type);
+    return res.send(message);
+  }
+
+  // ===========================================
+  // NORMAL INTERACTION
+  // ===========================================
+
+  const seed = `${today}-${type}-${sender}-${target}`;
+  const value = generateValue(seed, type, 100, 1, sender);
+
+  const tempCfg = { min: 1, max: 100, levels: [30, 70] };
+  const joke = getJoke(req, type, value, tempCfg);
+
+  const message = `${senderDisplay} ${actionWord} ${targetDisplay} with ${value}% power!${joke}`;
+
+  recordInteraction(sender, target, type);
+  return res.send(message);
 }
 
 // ===========================================
@@ -2690,6 +2759,140 @@ const leaderboard = entries
 
 return res.send(`🏆 Daily Leaderboard (commands): ${leaderboard}`);
 }
+}
+
+// ===========================================
+// 📊 UNIVERSAL TOP COMMAND — !top <interaction>
+// Replaces BOTH topsenders & topreceivers
+// ===========================================
+
+if (type === "top") {
+    const interactionType = (args[0] || "").toLowerCase();
+
+    // Show usage if no type provided
+    if (!interactionType) {
+        return res.send(`📊 Usage: !top <interaction>\nExample: !top spank`);
+    }
+
+    // Check if interaction exists
+    if (!interactions.includes(interactionType)) {
+        const list = interactions.join(", ");
+        return res.send(
+            `❌ That interaction does not exist. Available interactions: ${list}`
+        );
+    }
+
+    // ===========================================
+    // TITLE MAPS (senders + receivers)
+    // ===========================================
+
+    const senderTitles = {
+        spank: "🍑 Biggest Spankers",
+        slap: "🖐️ Biggest Slappers",
+        hug: "💞 Best Huggers",
+        kiss: "💋 Biggest Kissers",
+        pat: "🫶 Top Patters",
+        bonk: "🔨 Top Bonkers",
+        love: "❤️ Biggest Lovers",
+        boop: "👉 Best Boopers",
+        throwshoe: "🥿 Top Shoe Throwers",
+        highfive: "✋ Best High-Fivers",
+        fliptable: "┻━┻ Fiercest Table Flippers"
+    };
+
+    const receiverTitles = {
+        spank: "🍑 Most Spanked",
+        slap: "🖐️ Most Slapped",
+        hug: "💞 Most Hugged",
+        kiss: "💋 Most Kissed",
+        pat: "🫶 Most Patted",
+        bonk: "🔨 Most Bonked",
+        love: "❤️ Most Loved",
+        boop: "👉 Most Booped",
+        throwshoe: "🥿 Most Hit by Shoes",
+        highfive: "✋ Most High-Fived",
+        fliptable: "┻━┻ Most Tables Flipped At"
+    };
+
+    const senderTitle =
+        senderTitles[interactionType] ||
+        `🔥 Top ${interactionType.charAt(0).toUpperCase() + interactionType.slice(1)} Senders`;
+
+    const receiverTitle =
+        receiverTitles[interactionType] ||
+        `🎯 Top Receivers of ${interactionType.charAt(0).toUpperCase() + interactionType.slice(1)}`;
+
+    // ===========================================
+    // BUILD SENDER LEADERBOARD
+    // ===========================================
+
+    const senderMap = {};
+
+    for (const [receiver, data] of Object.entries(interactionStats)) {
+        if (!data._from) continue;
+
+        for (const [senderUser, record] of Object.entries(data._from)) {
+            const count = record[interactionType] || 0;
+            if (count > 0) {
+                senderMap[senderUser] = (senderMap[senderUser] || 0) + count;
+            }
+        }
+    }
+
+    const topSenders = Object.entries(senderMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+
+    // ===========================================
+    // BUILD RECEIVER LEADERBOARD
+    // ===========================================
+
+    const receiverMap = Object.entries(interactionStats)
+        .filter(([user, data]) => data[interactionType])
+        .map(([user, data]) => ({ user, count: data[interactionType] }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+
+    // ===========================================
+    // IF NO DATA EXISTS
+    // ===========================================
+
+    if (!topSenders.length && !receiverMap.length) {
+        return res.send(`📊 No "${interactionType}" interactions recorded today!`);
+    }
+
+    // ===========================================
+    // RANK EMOJIS
+    // ===========================================
+
+    const rankEmoji = (index) =>
+        ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"][index] || "";
+
+    // ===========================================
+    // FORMAT LISTS
+    // ===========================================
+
+    const senderList = topSenders.length
+        ? topSenders.map(([u, c], i) => `${rankEmoji(i)} @${u} — ${c}`).join("\n")
+        : "No senders today.";
+
+    const receiverList = receiverMap.length
+        ? receiverMap.map((e, i) => `${rankEmoji(i)} @${e.user} — ${e.count}`).join("\n")
+        : "No receivers today.";
+
+
+    // ===========================================
+    // FINAL RESPONSE
+    // ===========================================
+
+    const message =
+        `📊${interactionType.toUpperCase()} Leaderboards\n\n` +
+        `${senderTitle}:\n${senderList}\n\n` +
+        `${receiverTitle}:\n${receiverList}`;
+
+    return res.send(message);
 }
 
 // ===========================================
@@ -2811,86 +3014,105 @@ return res.send(builder(winner));
 // 📋 GENERIC LIST-BASED HANDLER
 // ===========================================
 
+// ===========================================
+// 📝 MESSAGE TEMPLATES FOR LIST-BASED COMMANDS
+// ===========================================
+
+const listMessageTemplates = {
+  default: (sender, cfg, chosen, joke) =>
+    `${sender}, your ${cfg.label} today is ${chosen}! ${joke}`,
+
+  animal: (sender, cfg, chosen, joke) =>
+    `${sender}, your animal spirit today is ${chosen}! ${joke}`,
+
+  piratevibes: (sender, cfg, chosen, joke) =>
+    `🏴‍☠️ ${sender}, your pirate vibe today is ${chosen}! ${joke}`,
+
+  drink: (sender, cfg, chosen, joke) =>
+    `${sender}, your drink of the day is ${chosen}! ${joke}`,
+
+  fish: (sender, cfg, chosen, tribute) =>
+    `${sender}, you caught a ${chosen}! ${tribute}`,
+};
+
+// ===========================================
+// 📋 LIST CATEGORIES
+// ===========================================
+
 const listGroups = [
-  { map: colors, jokesKey: "colors" },
-  { map: auravibes, jokesKey: "auravibes" },
-  { map: piratevibes, jokesKey: "piratevibes" },
-  { map: wizardvibes, jokesKey: "wizard" },
-  { map: outfits, jokesKey: "outfits" },
-  { map: elements, jokesKey: "elements" },
-  { map: powers, jokesKey: "powers" },
-  { map: pirateoutfits, jokesKey: "pirateoutfits" },
-  { map: wizarditems, jokesKey: "wizarditems" },
-  { map: elementalitems, jokesKey: "elementalitems" },
-  { map: auraitems, jokesKey: "auraitems" },
-  { map: animal, jokesKey: "animal" },
-  { map: drink, jokesKey: "drink" },
-  { map: fish, jokesKey: "fish" }
+  { map: colors,          jokesKey: "colors",        category: "colors" },
+  { map: auravibes,       jokesKey: "auravibes",     category: "auravibes" },
+  { map: piratevibes,     jokesKey: "piratevibes",   category: "piratevibes" },
+  { map: wizardvibes,     jokesKey: "wizard",        category: "wizardvibes" },
+  { map: outfits,         jokesKey: "outfits",       category: "outfits" },
+  { map: elements,        jokesKey: "elements",      category: "elements" },
+  { map: powers,          jokesKey: "powers",        category: "powers" },
+  { map: pirateoutfits,   jokesKey: "pirateoutfits", category: "pirateoutfits" },
+  { map: wizarditems,     jokesKey: "wizarditems",   category: "wizarditems" },
+  { map: elementalitems,  jokesKey: "elementalitems",category: "elementalitems" },
+  { map: auraitems,       jokesKey: "auraitems",     category: "auraitems" },
+  { map: animal,          jokesKey: "animal",        category: "animal" },
+  { map: drink,           jokesKey: "drink",         category: "drink" },
+  { map: fish,            jokesKey: "fish",          category: "fish" },
 ];
 
-for (const { map, jokesKey } of listGroups) {
-if (map[type]) {
-const cfg = map[type];
+// ===========================================
+// 📋 GENERIC LIST-BASED HANDLER
+// ===========================================
 
-let index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
-let chosen = cfg.list[index];
+for (const { map, jokesKey, category } of listGroups) {
+  if (!map[type]) continue;
 
-const jokesForGroup = jokes[jokesKey] || [];
-const joke = jokesForGroup[index] || "";
+  const cfg = map[type];
 
-const trigger = listAspectTriggers[type];
-const hasAspect = aspectsOfTheDay[type] !== undefined;
+  let index = generateValue(seed, type, cfg.list.length - 1, 0, sender);
+  let chosen = cfg.list[index];
 
-if (trigger && hasAspect) {
-const alreadyWinner = Boolean(aspectsOfTheDay[type][today]);
+  const jokesForGroup = jokes[jokesKey] || [];
+  const joke = jokesForGroup[index] || "";
 
-const matchesTrigger =
-chosen
-  .toLowerCase()
-  .includes(trigger.includes.toLowerCase());
+  const trigger = listAspectTriggers[type];
+  const hasAspect = aspectsOfTheDay[type] !== undefined;
 
-if (!alreadyWinner && matchesTrigger) {
-aspectsOfTheDay[type][today] = { user: sender, chosen };
+  if (trigger && hasAspect) {
+    const alreadyWinner = Boolean(aspectsOfTheDay[type][today]);
+    const matchesTrigger = chosen
+      .toLowerCase()
+      .includes(trigger.includes.toLowerCase());
 
-const winnerFn = aspectOfTheDayMessages[type];
-if (winnerFn) {
-  message = winnerFn(senderDisplay, chosen, "", cfg);
-} else {
-  message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke} 🏆 You are the ${cfg.label} of the Day! 🎉`;
-}
+    if (!alreadyWinner && matchesTrigger) {
+      aspectsOfTheDay[type][today] = { user: sender, chosen };
 
-statCounters[sender] = statCounters[sender] || {};
-statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
-commandCounters[type] = (commandCounters[type] || 0) + 1;
+      message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke} 🏆 You are the ${cfg.label} of the Day! 🎉`;
 
-return res.send(message);
-}
+      statCounters[sender] = statCounters[sender] || {};
+      statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
+      commandCounters[type] = (commandCounters[type] || 0) + 1;
 
-if (alreadyWinner && matchesTrigger) {
-if (index < cfg.list.length - 1) index++;
-else if (index > 0) index--;
+      return res.send(message);
+    }
 
-chosen = cfg.list[index];
-}
-}
+    if (alreadyWinner && matchesTrigger) {
+      if (index < cfg.list.length - 1) index++;
+      else if (index > 0) index--;
+      chosen = cfg.list[index];
+    }
+  }
 
-if (type === "fish") {
-  const tribute = jokes.fish[0]; 
-  message = `${senderDisplay}, you caught a ${chosen}! ${tribute}`;
+  const templateFn =
+    listMessageTemplates[category] || listMessageTemplates.default;
+
+  const finalArg = (category === "fish")
+    ? jokes.fish[0]
+    : joke;
+
+  message = templateFn(senderDisplay, cfg, chosen, finalArg);
+
   statCounters[sender] = statCounters[sender] || {};
   statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
   commandCounters[type] = (commandCounters[type] || 0) + 1;
+
   return res.send(message);
-}
-
-message = `${senderDisplay}, your ${cfg.label} today is ${chosen}! ${joke}`;
-
-statCounters[sender] = statCounters[sender] || {};
-statCounters[sender][type] = (statCounters[sender][type] || 0) + 1;
-commandCounters[type] = (commandCounters[type] || 0) + 1;
-
-return res.send(message);
-}
 }
 
 // ===========================================
