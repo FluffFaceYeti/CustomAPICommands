@@ -1,7 +1,7 @@
 ----------------------------------------------------
 Fossabot Formatted Links - Stats 
 ----------------------------------------------------
-```yaml
+
 $(customapi https://yourusername.onrender.com?sender=${sender}&type=beard)
 
 $(customapi https://yourusername.onrender.com?sender=${sender}&type=hair)
@@ -115,7 +115,7 @@ Fossabot Formatted Links - Carry
 $(customapi https://yourusername.onrender.com?sender=${sender}&type=weight)
 
 $(customapi https://yourusername.onrender.com?sender=${sender}&type=items)
-```
+
 ----------------------------------------------------
 Fossabot Formatted Links - Actions
 ----------------------------------------------------
