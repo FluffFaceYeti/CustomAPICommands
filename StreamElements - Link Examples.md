@@ -1,7 +1,7 @@
 ----------------------------------------------------
 StreamElements Formatted Links - Stats 
 ----------------------------------------------------
-```yaml
+
 ${customapi.https://yourusername.onrender.com?sender=${sender}&type=beard}
 
 ${customapi.https://yourusername.onrender.com?sender=${sender}&type=hair}
@@ -115,7 +115,7 @@ StreamElements Formatted Links - Carry
 ${customapi.https://yourusername.onrender.com?sender=${sender}&type=weight}
 
 ${customapi.https://yourusername.onrender.com?sender=${sender}&type=items}
-```
+
 ----------------------------------------------------
 StreamElements Formatted Links - Actions
 ----------------------------------------------------
